@@ -17,6 +17,11 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname)));
 
+// Ruta raíz → dashboard
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'dashboard.html'));
+});
+
 // ── helpers ─────────────────────────────────────────────────────────────────
 function extractJSON(raw) {
   const fenced = raw.match(/```json\s*([\s\S]*?)\s*```/);
