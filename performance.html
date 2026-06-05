@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Performance · ShellTI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --deep:#020617;--deep2:#040d1e;--deep3:#060f1c;
+  --cyan:#00D4FF;--cyan2:#00b8e6;
+  --green:#34D399;--silver:#E2E8F0;--muted:#94A3B8;
+  --border:rgba(0,212,255,0.13);--bh:rgba(0,212,255,0.32);
+  --card:rgba(3,9,24,0.93);
+  --danger:#FF6B6B;--warn:#F59E0B;--ok:#34D399;
+  --purple:#A78BFA;
+}
+html{scroll-behavior:smooth}
+::-webkit-scrollbar{width:3px}
+::-webkit-scrollbar-track{background:var(--deep)}
+::-webkit-scrollbar-thumb{background:rgba(0,212,255,0.4);border-radius:2px}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--deep);color:var(--silver);line-height:1.7;overflow-x:hidden;min-height:100vh}
+body::before{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background-image:linear-gradient(rgba(0,212,255,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,255,0.03) 1px,transparent 1px);
+  background-size:48px 48px;
+}
+
+/* NAV */
+nav{
+  position:fixed;top:0;width:100%;z-index:300;height:64px;padding:0 2.5rem;
+  display:flex;align-items:center;justify-content:space-between;
+  background:rgba(2,6,23,0.95);backdrop-filter:blur(28px) saturate(200%);
+  border-bottom:1px solid var(--border);
+}
+.nav-brand-text{font-weight:800;font-size:1.1rem;color:var(--silver);letter-spacing:-.5px}
+.nav-brand-text span{color:var(--cyan)}
+.nav-brand-sub{font-family:'JetBrains Mono',monospace;font-size:.55rem;letter-spacing:2px;color:var(--muted);text-transform:uppercase}
+.nav-tabs{display:flex;align-items:center;gap:0;height:64px}
+.nav-tab{
+  font-family:'JetBrains Mono',monospace;font-size:.6rem;letter-spacing:1.5px;text-transform:uppercase;
+  padding:0 18px;height:100%;display:flex;align-items:center;
+  text-decoration:none;color:var(--muted);border-bottom:2px solid transparent;
+  transition:color .2s,border-color .2s;white-space:nowrap;
+}
+.nav-tab:hover{color:var(--silver)}
+.nav-tab.active{color:var(--cyan);border-bottom-color:var(--cyan)}
+.nav-right{display:flex;align-items:center;gap:12px}
+.nav-tag{font-family:'JetBrains Mono',monospace;font-size:.6rem;letter-spacing:2px;text-transform:uppercase;border:1px solid rgba(0,212,255,0.3);color:var(--cyan);padding:3px 10px;background:rgba(0,212,255,0.07)}
+.btn-export-perf{
+  background:transparent;border:1px solid rgba(0,212,255,0.35);
+  color:var(--cyan);font-family:'JetBrains Mono',monospace;font-size:.62rem;
+  font-weight:600;letter-spacing:1.5px;text-transform:uppercase;
+  padding:7px 16px;cursor:pointer;transition:all .2s;
+  display:none;align-items:center;gap:7px;
+}
+.btn-export-perf:hover{background:rgba(0,212,255,0.1);box-shadow:0 0 16px rgba(0,212,255,0.2)}
+.btn-export-perf.visible{display:inline-flex}
+
+/* MAIN */
+.main{max-width:1100px;margin:0 auto;padding:110px 40px 60px;position:relative;z-index:1}
+
+/* SEARCH */
+.search-section{margin-bottom:48px}
+.search-label{font-family:'JetBrains Mono',monospace;font-size:.62rem;letter-spacing:2.5px;text-transform:uppercase;color:var(--green);margin-bottom:12px;display:flex;align-items:center;gap:10px}
+.search-label::before{content:'';width:20px;height:1px;background:var(--green);box-shadow:0 0 8px rgba(52,211,153,.7)}
+.search-bar{display:flex;border:1px solid var(--border);background:var(--card);transition:border-color .2s}
+.search-bar:focus-within{border-color:rgba(0,212,255,0.5);box-shadow:0 0 0 3px rgba(0,212,255,0.08)}
+.search-bar input{flex:1;background:transparent;border:none;color:var(--silver);font-family:'JetBrains Mono',monospace;font-size:.88rem;padding:15px 20px;outline:none;letter-spacing:.5px}
+.search-bar input::placeholder{color:var(--muted)}
+.btn-clear{background:transparent;border:none;border-left:1px solid var(--border);color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:.68rem;letter-spacing:1.5px;text-transform:uppercase;padding:15px 18px;cursor:pointer;transition:color .2s;white-space:nowrap}
+.btn-clear:hover{color:var(--danger)}
+.btn-scan{background:linear-gradient(135deg,var(--cyan),var(--cyan2));color:var(--deep);border:none;font-family:'JetBrains Mono',monospace;font-size:.68rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;padding:15px 28px;cursor:pointer;transition:opacity .2s,box-shadow .2s;white-space:nowrap}
+.btn-scan:hover{opacity:.9;box-shadow:0 0 28px rgba(0,212,255,0.4)}
+.btn-scan:disabled{opacity:.4;cursor:not-allowed}
+.status{display:none;align-items:center;gap:12px;margin-top:14px;font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--muted);letter-spacing:1px}
+.status.visible{display:flex}
+.spinner{width:12px;height:12px;border:2px solid rgba(0,212,255,0.2);border-top-color:var(--cyan);border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+.error-box{display:none;margin-top:14px;padding:12px 16px;border:1px solid rgba(255,107,107,0.35);background:rgba(255,107,107,0.07);font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--danger)}
+.error-box.visible{display:flex;align-items:center;gap:10px}
+
+/* DASHBOARD AREA */
+.dashboard{display:none}
+.dashboard.visible{display:block;animation:fadeUp .4s ease}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+
+/* SECTION HEADER */
+.sec-hd{display:flex;align-items:center;justify-content:space-between;padding:20px 0 14px;border-top:1px solid rgba(0,212,255,0.08);margin-bottom:16px}
+.sec-hd:first-child{border-top:none;padding-top:0}
+.sec-hd-title{font-family:'JetBrains Mono',monospace;font-size:.6rem;letter-spacing:2.5px;text-transform:uppercase;color:var(--green);display:flex;align-items:center;gap:10px}
+.sec-hd-title::before{content:'';width:14px;height:1px;background:var(--green);box-shadow:0 0 6px rgba(52,211,153,.6)}
+
+/* HERO PERF */
+.perf-hero{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:rgba(0,212,255,0.08);border:1px solid var(--border);margin-bottom:32px}
+.perf-hero-cell{background:var(--deep2);padding:22px 20px;text-align:center;position:relative;overflow:hidden}
+.perf-hero-cell::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:var(--accent-color,var(--cyan));opacity:.4}
+.perf-val{font-family:'JetBrains Mono',monospace;font-size:2rem;font-weight:700;line-height:1;margin-bottom:6px;letter-spacing:-1px}
+.perf-unit{font-size:.65rem;font-weight:400;color:var(--muted);margin-left:3px}
+.perf-label{font-family:'JetBrains Mono',monospace;font-size:.55rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+.perf-grade{font-family:'JetBrains Mono',monospace;font-size:.55rem;letter-spacing:1.5px;text-transform:uppercase;padding:2px 8px;display:inline-block;margin-top:6px}
+
+/* GRADE COLORS */
+.grade-A{background:rgba(52,211,153,0.1);border:1px solid rgba(52,211,153,0.3);color:var(--ok)}
+.grade-B{background:rgba(0,212,255,0.1);border:1px solid rgba(0,212,255,0.3);color:var(--cyan)}
+.grade-C{background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);color:var(--warn)}
+.grade-D{background:rgba(255,107,107,0.1);border:1px solid rgba(255,107,107,0.3);color:var(--danger)}
+.grade-F{background:rgba(255,107,107,0.15);border:1px solid rgba(255,107,107,0.5);color:var(--danger)}
+
+/* MAIN GRID */
+.perf-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.perf-panel{background:var(--card);border:1px solid var(--border);padding:0}
+.perf-panel-hd{font-family:'JetBrains Mono',monospace;font-size:.55rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted);padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
+.perf-panel-hd::before{content:'';width:10px;height:1px;background:var(--cyan);opacity:.7}
+.perf-panel-body{padding:16px 18px}
+
+/* ROWS */
+.info-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(0,212,255,0.05)}
+.info-row:last-child{border-bottom:none}
+.info-key{font-size:.75rem;color:var(--muted)}
+.info-val{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--silver);text-align:right;word-break:break-all;max-width:60%}
+.info-val.ok{color:var(--ok)}
+.info-val.warn{color:var(--warn)}
+.info-val.bad{color:var(--danger)}
+.info-val.cyan{color:var(--cyan)}
+
+/* TIMING BARS */
+.timing-list{display:flex;flex-direction:column;gap:10px}
+.timing-item{}
+.timing-hd{display:flex;justify-content:space-between;margin-bottom:4px}
+.timing-name{font-size:.72rem;color:var(--silver)}
+.timing-ms{font-family:'JetBrains Mono',monospace;font-size:.68rem;color:var(--muted)}
+.timing-bar-track{height:4px;background:rgba(0,212,255,0.07);border-radius:2px;overflow:hidden;position:relative}
+.timing-bar-fill{height:100%;border-radius:2px;transition:width 1s ease}
+
+/* WATERFALL */
+.waterfall{display:flex;flex-direction:column;gap:6px;padding:0 0 4px}
+.wf-row{display:flex;align-items:center;gap:10px}
+.wf-name{font-size:.68rem;color:var(--muted);width:130px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wf-track{flex:1;height:8px;background:rgba(255,255,255,0.04);position:relative;border-radius:1px}
+.wf-bar{height:100%;position:absolute;border-radius:1px;opacity:.85}
+.wf-ms{font-family:'JetBrains Mono',monospace;font-size:.6rem;color:var(--muted);width:45px;text-align:right;flex-shrink:0}
+
+/* HTTP HEADERS TABLE */
+.headers-list{display:flex;flex-direction:column;gap:6px}
+.header-row{display:flex;gap:10px;padding:7px 10px;background:rgba(0,212,255,0.03);border:1px solid rgba(0,212,255,0.07)}
+.header-name{font-family:'JetBrains Mono',monospace;font-size:.62rem;color:var(--cyan);width:140px;flex-shrink:0;word-break:break-all}
+.header-val{font-family:'JetBrains Mono',monospace;font-size:.6rem;color:var(--muted);word-break:break-all;line-height:1.5}
+
+/* DNS CHAIN */
+.dns-chain{display:flex;align-items:center;flex-wrap:wrap;gap:6px;padding:8px 0}
+.dns-hop{font-family:'JetBrains Mono',monospace;font-size:.65rem;padding:4px 10px;background:rgba(0,212,255,0.06);border:1px solid rgba(0,212,255,0.18);color:var(--cyan)}
+.dns-arrow{color:var(--muted);font-size:.7rem}
+
+/* TECH STACK */
+.tech-stack{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
+.tech-tag{font-family:'JetBrains Mono',monospace;font-size:.58rem;letter-spacing:.5px;padding:3px 10px;border:1px solid;text-transform:uppercase}
+
+/* REDIRECT CHAIN */
+.redirect-chain{display:flex;flex-direction:column;gap:6px}
+.redirect-hop{display:flex;align-items:center;gap:10px;padding:7px 10px;border:1px solid rgba(0,212,255,0.08);background:rgba(0,212,255,0.02)}
+.redirect-code{font-family:'JetBrains Mono',monospace;font-size:.62rem;padding:2px 7px;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);color:var(--warn);flex-shrink:0}
+.redirect-url{font-family:'JetBrains Mono',monospace;font-size:.6rem;color:var(--muted);word-break:break-all}
+
+/* FULL WIDTH */
+.perf-panel-full{background:var(--card);border:1px solid var(--border);margin-bottom:16px}
+
+/* SCORE RING */
+.score-ring-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px}
+.score-ring{position:relative;width:96px;height:96px}
+.score-ring svg{transform:rotate(-90deg)}
+.score-ring-num{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:1.5rem;font-weight:700}
+.score-ring-label{font-family:'JetBrains Mono',monospace;font-size:.55rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-top:10px;text-align:center}
+
+/* RECOMMENDATION ITEMS */
+.rec-list{display:flex;flex-direction:column;gap:8px}
+.rec-item{display:flex;align-items:flex-start;gap:12px;padding:11px 14px;border:1px solid;background}
+.rec-item.critical{border-color:rgba(255,107,107,0.25);background:rgba(255,107,107,0.04)}
+.rec-item.warning{border-color:rgba(245,158,11,0.2);background:rgba(245,158,11,0.03)}
+.rec-item.info{border-color:rgba(0,212,255,0.15);background:rgba(0,212,255,0.03)}
+.rec-badge{font-family:'JetBrains Mono',monospace;font-size:.52rem;letter-spacing:1px;text-transform:uppercase;padding:2px 8px;white-space:nowrap;flex-shrink:0;border:1px solid}
+.rec-badge.critical{background:rgba(255,107,107,0.1);border-color:rgba(255,107,107,0.3);color:var(--danger)}
+.rec-badge.warning{background:rgba(245,158,11,0.1);border-color:rgba(245,158,11,0.3);color:var(--warn)}
+.rec-badge.info{background:rgba(0,212,255,0.07);border-color:rgba(0,212,255,0.25);color:var(--cyan)}
+.rec-text{font-size:.78rem;color:var(--muted);line-height:1.6}
+.rec-text strong{color:var(--silver)}
+
+/* NOTA */
+.nota{font-family:'JetBrains Mono',monospace;font-size:.58rem;color:var(--muted);letter-spacing:.5px;line-height:1.8;padding:14px 16px;border:1px solid rgba(0,212,255,0.07);background:rgba(0,212,255,0.02);margin-top:32px}
+</style>
+</head>
+<body>
+
+<nav style="height:auto;flex-direction:column;padding:0">
+  <div style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:0 2.5rem;height:54px;border-bottom:1px solid var(--border)">
+    <div>
+      <div class="nav-brand-text">Shell<span>TI</span></div>
+      <div class="nav-brand-sub">Scanner · Performance</div>
+    </div>
+    <div class="nav-tabs" style="height:54px">
+      <a href="dashboard.html" class="nav-tab" onclick="syncUrlToAudit(event)">Auditoría</a>
+      <a href="performance.html" class="nav-tab active">Performance</a>
+    </div>
+    <div class="nav-right">
+      <button class="btn-export-perf" id="btnExport" onclick="exportPDF()">⬇ PDF</button>
+      <div class="nav-tag">Herramienta Interna</div>
+    </div>
+  </div>
+  <!-- UNIFIED SEARCH BAR -->
+  <div style="width:100%;padding:8px 2.5rem;display:flex;gap:0;background:rgba(2,6,23,0.98);border-bottom:1px solid var(--border)">
+    <input type="text" id="urlInput" placeholder="empresa.cl · https://www.empresa.cl"
+      style="flex:1;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-right:none;color:var(--silver);font-family:'JetBrains Mono',monospace;font-size:.82rem;padding:9px 16px;outline:none;letter-spacing:.5px"
+      onfocus="this.style.borderColor='rgba(0,212,255,0.5)'" onblur="this.style.borderColor='rgba(0,212,255,0.13)'" />
+    <button onclick="clearAll()" style="background:transparent;border:1px solid var(--border);border-right:none;color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:.62rem;letter-spacing:1px;text-transform:uppercase;padding:9px 14px;cursor:pointer;white-space:nowrap" onmouseover="this.style.color='#FF6B6B'" onmouseout="this.style.color=''">✕</button>
+    <button id="scanBtn" onclick="runScan()" style="background:linear-gradient(135deg,#00D4FF,#00b8e6);color:#020617;border:none;font-family:'JetBrains Mono',monospace;font-size:.68rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;padding:9px 24px;cursor:pointer;white-space:nowrap">Analizar →</button>
+  </div>
+</nav>
+
+<div class="main">
+
+  <div class="search-section" style="margin-bottom:32px">
+    <div class="status" id="status">
+      <div class="spinner"></div>
+      <span id="statusText">Analizando performance...</span>
+    </div>
+    <div class="error-box" id="errorBox">
+      <span>⚠</span><span id="errorText"></span>
+    </div>
+  </div>
+
+  <div class="dashboard" id="dashboard">
+
+    <!-- HERO KPIs -->
+    <div class="sec-hd">
+      <div class="sec-hd-title">Métricas Principales</div>
+    </div>
+    <div class="perf-hero" id="heroKpis"></div>
+
+    <!-- ROW 1: Info del servidor + Tiempos de respuesta -->
+    <div class="perf-grid">
+      <div class="perf-panel">
+        <div class="perf-panel-hd">Información del Servidor & Dominio</div>
+        <div class="perf-panel-body" id="panelServer"></div>
+      </div>
+      <div class="perf-panel">
+        <div class="perf-panel-hd">Desglose de Tiempos de Carga</div>
+        <div class="perf-panel-body" id="panelTiming"></div>
+      </div>
+    </div>
+
+    <!-- ROW 2: DNS + Seguridad TLS -->
+    <div class="perf-grid">
+      <div class="perf-panel">
+        <div class="perf-panel-hd">Cadena DNS & Resolución</div>
+        <div class="perf-panel-body" id="panelDns"></div>
+      </div>
+      <div class="perf-panel">
+        <div class="perf-panel-hd">Seguridad TLS / SSL</div>
+        <div class="perf-panel-body" id="panelTls"></div>
+      </div>
+    </div>
+
+    <!-- ROW 3: HTTP Headers + Stack tecnológico -->
+    <div class="perf-grid">
+      <div class="perf-panel">
+        <div class="perf-panel-hd">Cabeceras HTTP de Respuesta</div>
+        <div class="perf-panel-body" id="panelHeaders"></div>
+      </div>
+      <div class="perf-panel">
+        <div class="perf-panel-hd">Stack Tecnológico Detectado</div>
+        <div class="perf-panel-body" id="panelStack"></div>
+      </div>
+    </div>
+
+    <!-- ROW 4: Cadena de redirecciones (full width) -->
+    <div class="perf-panel-full" id="panelRedirects">
+      <div class="perf-panel-hd">Cadena de Redirecciones HTTP</div>
+      <div class="perf-panel-body" id="panelRedirectsBody"></div>
+    </div>
+
+    <!-- ROW 5: Waterfall estimado + Recomendaciones -->
+    <div class="perf-grid">
+      <div class="perf-panel">
+        <div class="perf-panel-hd">Waterfall Estimado de Carga</div>
+        <div class="perf-panel-body" id="panelWaterfall"></div>
+      </div>
+      <div class="perf-panel">
+        <div class="perf-panel-hd">Score de Performance</div>
+        <div class="perf-panel-body" id="panelScore"></div>
+      </div>
+    </div>
+
+    <!-- RECOMENDACIONES full -->
+    <div class="perf-panel-full">
+      <div class="perf-panel-hd">Recomendaciones de Optimización</div>
+      <div class="perf-panel-body" id="panelRecs"></div>
+    </div>
+
+    <div class="nota" id="notaFinal"></div>
+
+  </div>
+</div>
+
+<script>
+
+// ─── HELPERS ─────────────────────────────────────────────────────────────────
+function norm(url) {
+  url = url.trim();
+  if (!url.startsWith('http')) url = 'https://' + url;
+  return url;
+}
+function showStatus(txt) {
+  document.getElementById('statusText').textContent = txt;
+  document.getElementById('status').classList.add('visible');
+}
+function hideStatus() { document.getElementById('status').classList.remove('visible'); }
+function showError(msg) {
+  const b = document.getElementById('errorBox');
+  document.getElementById('errorText').textContent = msg;
+  b.classList.add('visible');
+}
+function hideError() { document.getElementById('errorBox').classList.remove('visible'); }
+function clearAll() {
+  document.getElementById('urlInput').value = '';
+  document.getElementById('dashboard').classList.remove('visible');
+  document.getElementById('btnExport').classList.remove('visible');
+  hideStatus(); hideError();
+}
+function gradeColor(g) {
+  return {A:'#34D399',B:'#00D4FF',C:'#F59E0B',D:'#FF6B6B',F:'#FF6B6B'}[g] || '#94A3B8';
+}
+function msColor(ms, okMs, warnMs) {
+  return ms <= okMs ? 'var(--ok)' : ms <= warnMs ? 'var(--warn)' : 'var(--danger)';
+}
+function barColor(ms, okMs, warnMs) {
+  return ms <= okMs ? '#34D399' : ms <= warnMs ? '#F59E0B' : '#FF6B6B';
+}
+
+// ─── CRAWL via Claude API ─────────────────────────────────────────────────────
+async function crawlViaAI(url) {
+  const res = await fetch('http://localhost:3000/performance', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ url })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || `Error del servidor: ${res.status}`);
+  }
+  const d = await res.json();
+  return d.data;
+}
+
+// ─── RENDER ───────────────────────────────────────────────────────────────────
+function scoreGrade(score) {
+  if (score >= 90) return 'A';
+  if (score >= 75) return 'B';
+  if (score >= 55) return 'C';
+  if (score >= 40) return 'D';
+  return 'F';
+}
+
+function renderHero(p) {
+  const ttfbG = p.ttfb <= 200 ? 'A' : p.ttfb <= 500 ? 'B' : p.ttfb <= 800 ? 'C' : 'D';
+  const loadG = p.fullyLoaded <= 2000 ? 'A' : p.fullyLoaded <= 4000 ? 'B' : p.fullyLoaded <= 7000 ? 'C' : 'D';
+  const scoreG = scoreGrade(p.performanceScore);
+  const tlsDays = p.tls?.certDaysLeft || 0;
+  const certG = tlsDays > 60 ? 'A' : tlsDays > 20 ? 'B' : tlsDays > 0 ? 'C' : 'F';
+
+  document.getElementById('heroKpis').innerHTML = `
+    <div class="perf-hero-cell" style="--accent-color:${gradeColor(scoreG)}">
+      <div class="perf-label">Score Global</div>
+      <div class="perf-val" style="color:${gradeColor(scoreG)}">${p.performanceScore}<span class="perf-unit">/100</span></div>
+      <span class="perf-grade grade-${scoreG}">${scoreG}</span>
+    </div>
+    <div class="perf-hero-cell" style="--accent-color:${gradeColor(ttfbG)}">
+      <div class="perf-label">TTFB</div>
+      <div class="perf-val" style="color:${gradeColor(ttfbG)}">${p.ttfb}<span class="perf-unit">ms</span></div>
+      <span class="perf-grade grade-${ttfbG}">${ttfbG}</span>
+    </div>
+    <div class="perf-hero-cell" style="--accent-color:${gradeColor(loadG)}">
+      <div class="perf-label">Fully Loaded</div>
+      <div class="perf-val" style="color:${gradeColor(loadG)}">${(p.fullyLoaded/1000).toFixed(1)}<span class="perf-unit">s</span></div>
+      <span class="perf-grade grade-${loadG}">${loadG}</span>
+    </div>
+    <div class="perf-hero-cell" style="--accent-color:${gradeColor(certG)}">
+      <div class="perf-label">Cert. SSL expira en</div>
+      <div class="perf-val" style="color:${gradeColor(certG)}">${tlsDays}<span class="perf-unit">días</span></div>
+      <span class="perf-grade grade-${certG}">${certG}</span>
+    </div>`;
+}
+
+function renderServer(p) {
+  const rows = [
+    ['IP Servidor', p.ip, 'cyan'],
+    ['IPv6', p.ipv6 || 'No detectado', p.ipv6 ? 'ok' : 'warn'],
+    ['ASN', p.asn, 'cyan'],
+    ['ISP / Proveedor', p.isp, ''],
+    ['País del servidor', p.country, ''],
+    ['Ciudad / Datacenter', p.city, ''],
+    ['CDN', p.cdn, p.cdn && p.cdn !== 'Sin CDN' ? 'ok' : 'warn'],
+    ['Hosting', p.hosting, ''],
+    ['Protocolo HTTP', p.httpVersion, p.httpVersion === 'HTTP/3' || p.httpVersion === 'HTTP/2' ? 'ok' : 'warn'],
+    ['Servidor web', p.serverSoftware, ''],
+    ['Recursos totales', `${p.resourceCount} recursos`, ''],
+    ['Peso transferido', `${p.transferSize} KB`, ''],
+    ['Compresión', `${p.compressionRatio}%`, p.compressionRatio > 60 ? 'ok' : 'warn'],
+    ['Cache hit rate', `${p.cacheHitRate}%`, p.cacheHitRate > 70 ? 'ok' : 'warn'],
+  ];
+  document.getElementById('panelServer').innerHTML = rows.map(([k, v, cls]) =>
+    `<div class="info-row"><span class="info-key">${k}</span><span class="info-val ${cls}">${v}</span></div>`
+  ).join('');
+}
+
+function renderTiming(p) {
+  const phases = [
+    { name: 'DNS Resolution', ms: p.dnsResolution, ok: 30, warn: 80 },
+    { name: 'TCP Handshake', ms: p.tcpHandshake, ok: 60, warn: 120 },
+    { name: 'TLS Handshake', ms: p.tlsHandshake, ok: 100, warn: 200 },
+    { name: 'Time to First Byte', ms: p.ttfb, ok: 200, warn: 600 },
+    { name: 'DOM Content Loaded', ms: p.domContentLoaded, ok: 1200, warn: 2500 },
+    { name: 'Fully Loaded', ms: p.fullyLoaded, ok: 2000, warn: 5000 },
+  ];
+  const maxMs = Math.max(...phases.map(p => p.ms));
+  document.getElementById('panelTiming').innerHTML = `<div class="timing-list">${
+    phases.map(ph => {
+      const pct = Math.round((ph.ms / maxMs) * 100);
+      const col = barColor(ph.ms, ph.ok, ph.warn);
+      const valCol = msColor(ph.ms, ph.ok, ph.warn);
+      return `<div class="timing-item">
+        <div class="timing-hd">
+          <span class="timing-name">${ph.name}</span>
+          <span class="timing-ms" style="color:${valCol}">${ph.ms} ms</span>
+        </div>
+        <div class="timing-bar-track">
+          <div class="timing-bar-fill" style="width:${pct}%;background:${col}"></div>
+        </div>
+      </div>`;
+    }).join('')
+  }</div>`;
+}
+
+function renderDns(p) {
+  const chain = p.dnsChain || [];
+  const chainHtml = chain.length
+    ? `<div class="dns-chain">${chain.map((hop, i) =>
+        `<span class="dns-hop">${hop}</span>${i < chain.length - 1 ? '<span class="dns-arrow">→</span>' : ''}`
+      ).join('')}</div>`
+    : '<div style="color:var(--muted);font-size:.75rem;padding:8px 0">No disponible</div>';
+
+  const redirectHtml = (p.redirectChain || []).length > 0
+    ? `<div style="margin-top:14px"><div style="font-family:'JetBrains Mono',monospace;font-size:.55rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:8px">Cadena de Redirecciones (${p.redirectCount})</div>
+    <div class="redirect-chain">${p.redirectChain.map(r =>
+      `<div class="redirect-hop">
+        <span class="redirect-code">${r.code}</span>
+        <span class="redirect-url">${r.from} ${r.to ? '→ ' + r.to : ''}</span>
+      </div>`
+    ).join('')}</div></div>`
+    : `<div style="margin-top:14px"><span style="color:var(--ok);font-size:.75rem">✓ Sin redirecciones innecesarias</span></div>`;
+
+  document.getElementById('panelDns').innerHTML = `
+    <div style="font-family:'JetBrains Mono',monospace;font-size:.55rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:8px">Resolución DNS</div>
+    ${chainHtml}
+    <div class="info-row" style="margin-top:12px"><span class="info-key">Tiempo DNS</span><span class="info-val ${p.dnsResolution <= 30 ? 'ok' : p.dnsResolution <= 80 ? 'warn' : 'bad'}">${p.dnsResolution} ms</span></div>
+    ${redirectHtml}`;
+}
+
+function renderTls(p) {
+  const tls = p.tls || {};
+  const days = tls.certDaysLeft || 0;
+  const daysCol = days > 60 ? 'ok' : days > 20 ? 'warn' : 'bad';
+  const verCol = tls.version === 'TLS 1.3' ? 'ok' : tls.version === 'TLS 1.2' ? 'warn' : 'bad';
+  const rows = [
+    ['Versión TLS', tls.version || '?', verCol],
+    ['Cipher suite', tls.cipher || '?', 'cyan'],
+    ['Emisor del certificado', tls.certIssuer || '?', ''],
+    ['Vence el', tls.certExpiry || '?', ''],
+    ['Días restantes del cert.', `${days} días`, daysCol],
+    ['HSTS', tls.hsts ? '✓ Activo' : '✗ Ausente', tls.hsts ? 'ok' : 'bad'],
+    ['OCSP Stapling', tls.ocspStapling ? '✓ Activo' : '✗ Ausente', tls.ocspStapling ? 'ok' : 'warn'],
+    ['Certificate Transparency', tls.certTransparency ? '✓ Activo' : '✗ Ausente', tls.certTransparency ? 'ok' : 'warn'],
+  ];
+  document.getElementById('panelTls').innerHTML = rows.map(([k, v, cls]) =>
+    `<div class="info-row"><span class="info-key">${k}</span><span class="info-val ${cls}">${v}</span></div>`
+  ).join('');
+}
+
+function renderHeaders(p) {
+  const h = p.headers || {};
+  const pairs = Object.entries(h).filter(([,v]) => v && v !== 'ausente' && v !== 'null');
+  document.getElementById('panelHeaders').innerHTML = `<div class="headers-list">${
+    pairs.map(([k, v]) => `<div class="header-row">
+      <span class="header-name">${k}</span>
+      <span class="header-val">${v}</span>
+    </div>`).join('')
+  }</div>`;
+}
+
+function renderStack(p) {
+  const catColors = {
+    CMS: ['rgba(0,212,255,0.08)','rgba(0,212,255,0.3)','#00D4FF'],
+    Backend: ['rgba(167,139,250,0.08)','rgba(167,139,250,0.3)','#A78BFA'],
+    Frontend: ['rgba(0,212,255,0.08)','rgba(0,212,255,0.3)','#00D4FF'],
+    'CDN/WAF': ['rgba(245,158,11,0.08)','rgba(245,158,11,0.3)','#F59E0B'],
+    Database: ['rgba(52,211,153,0.08)','rgba(52,211,153,0.3)','#34D399'],
+    Servidor: ['rgba(148,163,184,0.08)','rgba(148,163,184,0.2)','#94A3B8'],
+    Analytics: ['rgba(255,107,107,0.08)','rgba(255,107,107,0.3)','#FF6B6B'],
+    Marketing: ['rgba(255,107,107,0.08)','rgba(255,107,107,0.3)','#FF6B6B'],
+    Ecommerce: ['rgba(52,211,153,0.08)','rgba(52,211,153,0.3)','#34D399'],
+  };
+  const stack = p.techStack || [];
+  const byCategory = {};
+  stack.forEach(t => { if (!byCategory[t.category]) byCategory[t.category] = []; byCategory[t.category].push(t); });
+  document.getElementById('panelStack').innerHTML = Object.entries(byCategory).map(([cat, techs]) => {
+    const [bg, border, col] = catColors[cat] || catColors['Servidor'];
+    return `<div style="margin-bottom:12px">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:.52rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:6px">${cat}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px">${techs.map(t =>
+        `<span style="font-family:'JetBrains Mono',monospace;font-size:.6rem;padding:3px 10px;background:${bg};border:1px solid ${border};color:${col}">${t.name}</span>`
+      ).join('')}</div>
+    </div>`;
+  }).join('') + `
+  <div style="margin-top:16px;padding-top:14px;border-top:1px solid rgba(0,212,255,0.07)">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:.52rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:10px">Web Vitals Estimados</div>
+    ${[
+      ['LCP', (p.lighthouseEstimates?.lcp||0)+'s', p.lighthouseEstimates?.lcp <= 2.5 ? 'ok' : p.lighthouseEstimates?.lcp <= 4 ? 'warn' : 'bad', 'Largest Contentful Paint'],
+      ['FCP', (p.lighthouseEstimates?.fcp||0)+'s', p.lighthouseEstimates?.fcp <= 1.8 ? 'ok' : p.lighthouseEstimates?.fcp <= 3 ? 'warn' : 'bad', 'First Contentful Paint'],
+      ['CLS', p.lighthouseEstimates?.cls||0, p.lighthouseEstimates?.cls <= 0.1 ? 'ok' : p.lighthouseEstimates?.cls <= 0.25 ? 'warn' : 'bad', 'Cumulative Layout Shift'],
+      ['TTI', (p.lighthouseEstimates?.tti||0)+'s', p.lighthouseEstimates?.tti <= 3.8 ? 'ok' : p.lighthouseEstimates?.tti <= 7.3 ? 'warn' : 'bad', 'Time to Interactive'],
+      ['TBT', (p.lighthouseEstimates?.tbt||0)+'ms', p.lighthouseEstimates?.tbt <= 200 ? 'ok' : p.lighthouseEstimates?.tbt <= 600 ? 'warn' : 'bad', 'Total Blocking Time'],
+    ].map(([k,v,cls,full]) => `<div class="info-row" title="${full}">
+      <span class="info-key">${k} <span style="font-size:.6rem;color:var(--muted)">${full}</span></span>
+      <span class="info-val ${cls}">${v}</span>
+    </div>`).join('')}
+  </div>`;
+}
+
+function renderWaterfall(p) {
+  const wf = p.waterfall || [];
+  const maxMs = Math.max(...wf.map(r => r.ms));
+  document.getElementById('panelWaterfall').innerHTML = `<div class="waterfall">${
+    wf.map(r => {
+      const w = Math.round((r.ms / maxMs) * 100);
+      return `<div class="wf-row">
+        <span class="wf-name" title="${r.resource}">${r.resource}</span>
+        <div class="wf-track">
+          <div class="wf-bar" style="width:${w}%;background:${r.color}"></div>
+        </div>
+        <span class="wf-ms">${r.ms}ms</span>
+      </div>`;
+    }).join('')
+  }</div>`;
+}
+
+function renderScore(p) {
+  const score = p.performanceScore || 0;
+  const g = scoreGrade(score);
+  const col = gradeColor(g);
+  const circumference = 2 * Math.PI * 36;
+  const dash = circumference * (score / 100);
+  const lh = p.lighthouseEstimates || {};
+  document.getElementById('panelScore').innerHTML = `
+    <div style="display:flex;align-items:center;gap:24px;flex-wrap:wrap">
+      <div class="score-ring-wrap">
+        <div class="score-ring">
+          <svg width="96" height="96" viewBox="0 0 96 96">
+            <circle cx="48" cy="48" r="36" fill="none" stroke="rgba(0,212,255,0.07)" stroke-width="8"/>
+            <circle cx="48" cy="48" r="36" fill="none" stroke="${col}" stroke-width="8"
+              stroke-dasharray="${dash.toFixed(1)} ${circumference.toFixed(1)}"
+              stroke-linecap="round" style="-webkit-print-color-adjust:exact"/>
+          </svg>
+          <div class="score-ring-num" style="color:${col}">${score}</div>
+        </div>
+        <div class="score-ring-label">Performance<br>Score</div>
+      </div>
+      <div style="flex:1;min-width:120px">
+        ${[
+          ['Grade', `<span class="perf-grade grade-${g}">${g}</span>`, true],
+          ['HTTP', p.httpVersion, false],
+          ['Compresión', p.compressionRatio + '%', false],
+          ['Cache', p.cacheHitRate + '%', false],
+          ['Redirects', p.redirectCount || 0, false],
+        ].map(([k,v,raw]) => `<div class="info-row">
+          <span class="info-key">${k}</span>
+          ${raw ? `<span>${v}</span>` : `<span class="info-val cyan">${v}</span>`}
+        </div>`).join('')}
+      </div>
+    </div>`;
+}
+
+function renderRecs(p) {
+  const recs = p.recommendations || [];
+  document.getElementById('panelRecs').innerHTML = recs.length
+    ? `<div class="rec-list">${recs.map(r => `
+        <div class="rec-item ${r.level}">
+          <span class="rec-badge ${r.level}">${r.level === 'critical' ? '🔴 Crítico' : r.level === 'warning' ? '🟡 Advertencia' : 'ℹ Info'}</span>
+          <div class="rec-text"><strong>${r.title}</strong> — ${r.description}</div>
+        </div>`).join('')}
+      </div>`
+    : '<div style="color:var(--ok);font-size:.82rem">✓ Sin recomendaciones críticas detectadas.</div>';
+}
+
+function renderAll(p, url) {
+  renderHero(p);
+  renderServer(p);
+  renderTiming(p);
+  renderDns(p);
+  renderTls(p);
+  renderHeaders(p);
+  renderStack(p);
+  renderWaterfall(p);
+  renderScore(p);
+  renderRecs(p);
+  document.getElementById('notaFinal').textContent =
+    `⚠ Análisis generado por IA (ShellTI Scanner). Los valores son estimaciones técnicas basadas en datos públicamente observables del dominio ${url}. No reemplaza una auditoría Lighthouse real ni herramientas de medición directa. Para métricas definitivas use Google PageSpeed Insights, GTmetrix o WebPageTest. — shellti.com · contacto@shellti.com`;
+  document.getElementById('dashboard').classList.add('visible');
+  document.getElementById('btnExport').classList.add('visible');
+  window._perfData = { p, url, ts: new Date() };
+  try { sessionStorage.setItem('shellti_perf', JSON.stringify({ p, url, ts: new Date().toISOString() })); } catch(e) {}
+}
+
+// ─── RUN ──────────────────────────────────────────────────────────────────────
+async function runScan() {
+  const raw = document.getElementById('urlInput').value.trim();
+  if (!raw) return;
+  const url = norm(raw);
+  document.getElementById('scanBtn').disabled = true;
+  document.getElementById('dashboard').classList.remove('visible');
+  document.getElementById('btnExport').classList.remove('visible');
+  hideError();
+
+  const steps = [
+    'Resolviendo DNS y conectando...',
+    'Midiendo TTFB y latencia...',
+    'Analizando cabeceras HTTP...',
+    'Detectando stack tecnológico...',
+    'Evaluando TLS y certificados...',
+    'Calculando métricas de performance...',
+    'Generando recomendaciones...',
+  ];
+  let si = 0;
+  showStatus(steps[0]);
+  const interval = setInterval(() => { si = Math.min(si+1, steps.length-1); showStatus(steps[si]); }, 1800);
+
+  try {
+    const data = await crawlViaAI(url);
+    clearInterval(interval);
+    hideStatus();
+    renderAll(data, url);
+  } catch(e) {
+    clearInterval(interval);
+    hideStatus();
+    showError('Error al analizar: ' + e.message);
+  }
+  document.getElementById('scanBtn').disabled = false;
+}
+
+document.getElementById('urlInput').addEventListener('keydown', e => { if (e.key === 'Enter') runScan(); });
+
+function syncUrlToAudit(e) {
+  const url = document.getElementById('urlInput').value.trim();
+  if (url) {
+    try { sessionStorage.setItem('shellti_pending_url', url); } catch(e2) {}
+  }
+}
+
+(function restorePerf() {
+  try {
+    const saved = sessionStorage.getItem('shellti_perf');
+    if (saved) {
+      const { p, url, ts } = JSON.parse(saved);
+      document.getElementById('urlInput').value = url;
+      window._perfData = { p, url, ts: new Date(ts) };
+      renderAll(p, url);
+      return;
+    }
+    // Auto-run if pending URL from audit tab
+    const pending = sessionStorage.getItem('shellti_pending_url');
+    if (pending) {
+      document.getElementById('urlInput').value = pending;
+      sessionStorage.removeItem('shellti_pending_url');
+      setTimeout(runScan, 100);
+    }
+  } catch(e) {}
+})();
+
+// ─── PDF EXPORT ───────────────────────────────────────────────────────────────
+function exportPDF() {
+  const D = window._perfData;
+  if (!D) return;
+  const { p, url, ts } = D;
+  const dateStr = ts.toLocaleDateString('es-CL', { day: '2-digit', month: 'long', year: 'numeric' });
+  const timeStr = ts.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
+  const g = scoreGrade(p.performanceScore);
+  const col = gradeColor(g);
+
+  function row(k, v) { return `<tr><td style="padding:5pt 8pt;font-size:8pt;color:#475569;border-bottom:0.5pt solid #f1f5f9">${k}</td><td style="padding:5pt 8pt;font-size:8pt;font-family:monospace;color:#0f172a;border-bottom:0.5pt solid #f1f5f9;text-align:right">${v}</td></tr>`; }
+
+  const html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
+  <title>ShellTI · Performance · ${url}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Inter',sans-serif;font-size:9.5pt;color:#0f172a;background:#fff;line-height:1.6}
+    @page{size:A4;margin:15mm 14mm 20mm 14mm}
+    .print-btn{position:fixed;top:10pt;right:10pt;background:#0284c7;color:#fff;border:none;padding:7pt 14pt;font-family:Inter,sans-serif;font-weight:600;font-size:8pt;cursor:pointer}
+    @media print{.print-btn{display:none}}
+    .hd{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:10pt;border-bottom:2pt solid #0284c7;margin-bottom:18pt}
+    .logo{font-size:20pt;font-weight:800;color:#0f172a}.logo span{color:#0284c7}
+    .logo-sub{font-size:6pt;font-family:monospace;letter-spacing:2pt;text-transform:uppercase;color:#64748b;margin-top:3pt}
+    .logo-contact{font-size:6pt;font-family:monospace;color:#94a3b8;margin-top:2pt}
+    .badge{display:inline-block;background:#0f2444;color:#fff;font-size:6pt;font-family:monospace;letter-spacing:2pt;text-transform:uppercase;padding:3pt 8pt;margin-bottom:4pt}
+    .target{font-size:11pt;font-weight:700;margin-bottom:2pt}
+    .target-url{font-size:7pt;font-family:monospace;color:#0284c7;margin-bottom:2pt}
+    .date{font-size:6.5pt;font-family:monospace;color:#94a3b8}
+    .footer{position:fixed;bottom:0;left:0;right:0;border-top:0.5pt solid #e2e8f0;padding-top:5pt;display:flex;justify-content:space-between;background:#fff}
+    .footer span{font-size:5.5pt;font-family:monospace;color:#94a3b8}
+    .sec{font-size:7pt;font-family:monospace;letter-spacing:2.5pt;text-transform:uppercase;color:#0284c7;margin:14pt 0 8pt;padding-bottom:4pt;border-bottom:0.5pt solid #e2e8f0;display:flex;align-items:center;gap:7pt}
+    .sec::before{content:'';display:inline-block;width:14pt;height:1pt;background:#0284c7}
+    .hero-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border:0.5pt solid #e2e8f0;margin-bottom:14pt}
+    .kpi{padding:10pt;text-align:center;border-right:0.5pt solid #e2e8f0}
+    .kpi:last-child{border-right:none}
+    .kpi-v{font-size:18pt;font-weight:800;line-height:1;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .kpi-l{font-size:5pt;font-family:monospace;letter-spacing:1pt;text-transform:uppercase;color:#64748b;margin-top:3pt}
+    .two{display:grid;grid-template-columns:1fr 1fr;gap:8pt;margin-bottom:8pt}
+    .panel{border:0.5pt solid #e2e8f0;padding:10pt}
+    .ph{font-size:6pt;font-family:monospace;letter-spacing:2pt;text-transform:uppercase;color:#64748b;margin-bottom:8pt;padding-bottom:5pt;border-bottom:0.5pt solid #f1f5f9}
+    table{width:100%;border-collapse:collapse}
+    .bar-row{margin-bottom:6pt}
+    .bar-label{display:flex;justify-content:space-between;font-size:7pt;margin-bottom:2pt}
+    .bar-t{height:4pt;background:#e2e8f0;border-radius:2pt;overflow:hidden}
+    .bar-f{height:100%;border-radius:2pt;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .tls-ok{color:#059669}.tls-warn{color:#d97706}.tls-bad{color:#dc2626}
+    .rec{border:0.5pt solid;padding:7pt 9pt;margin-bottom:5pt;display:flex;gap:8pt;page-break-inside:avoid}
+    .rec.critical{border-color:#fca5a5;background:#fff8f8}
+    .rec.warning{border-color:#fcd34d;background:#fffdf0}
+    .rec.info{border-color:#93c5fd;background:#f0f9ff}
+    .rec-b{font-size:5.5pt;font-family:monospace;letter-spacing:1pt;text-transform:uppercase;padding:2pt 6pt;border:0.5pt solid;white-space:nowrap;flex-shrink:0;align-self:flex-start;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .critical .rec-b{background:#fff1f2;border-color:#fca5a5;color:#dc2626}
+    .warning .rec-b{background:#fffbeb;border-color:#fcd34d;color:#d97706}
+    .info .rec-b{background:#eff6ff;border-color:#93c5fd;color:#1d4ed8}
+    .rec-t{font-size:7.5pt;color:#334155;line-height:1.5}
+    .disclaimer{font-size:6pt;font-family:monospace;color:#94a3b8;line-height:1.8;padding:10pt;border:0.5pt solid #e2e8f0;background:#f8fafc;margin-top:16pt}
+  </style></head><body>
+  <button class="print-btn" onclick="window.print()">⬇ Guardar como PDF</button>
+  <div class="footer">
+    <span>ShellTI Technology Consultancy · shellti.com · contacto@shellti.com</span>
+    <span>Informe de Performance · Estimaciones técnicas · No reemplaza medición directa</span>
+  </div>
+
+  <div class="hd">
+    <div>
+      <div class="logo">Shell<span>TI</span></div>
+      <div class="logo-sub">Technology Consultancy · Performance Scanner</div>
+      <div class="logo-contact">shellti.com · contacto@shellti.com</div>
+    </div>
+    <div style="text-align:right">
+      <div class="badge">Informe de Performance</div>
+      <div class="target">${p.domain || url}</div>
+      <div class="target-url">${url}</div>
+      <div class="date">Generado el ${dateStr} · ${timeStr} hrs</div>
+    </div>
+  </div>
+
+  <div class="hero-kpis">
+    <div class="kpi"><div class="kpi-v" style="color:${col}">${p.performanceScore}/100</div><div class="kpi-l">Score Global · ${g}</div></div>
+    <div class="kpi"><div class="kpi-v" style="color:${p.ttfb<=200?'#059669':p.ttfb<=500?'#d97706':'#dc2626'}">${p.ttfb} ms</div><div class="kpi-l">TTFB</div></div>
+    <div class="kpi"><div class="kpi-v" style="color:${p.fullyLoaded<=2000?'#059669':p.fullyLoaded<=4000?'#d97706':'#dc2626'}">${(p.fullyLoaded/1000).toFixed(1)} s</div><div class="kpi-l">Fully Loaded</div></div>
+    <div class="kpi"><div class="kpi-v" style="color:${(p.tls?.certDaysLeft||0)>60?'#059669':(p.tls?.certDaysLeft||0)>20?'#d97706':'#dc2626'}">${p.tls?.certDaysLeft||0} d</div><div class="kpi-l">Cert. SSL expira</div></div>
+  </div>
+
+  <div class="two">
+    <div class="panel">
+      <div class="ph">Servidor & Dominio</div>
+      <table>${[['IP',p.ip],['ASN',p.asn],['ISP',p.isp],['País',p.country],['CDN',p.cdn],['HTTP',p.httpVersion],['Servidor',p.serverSoftware],['Peso',p.transferSize+' KB'],['Recursos',p.resourceCount+' items'],['Compresión',p.compressionRatio+'%'],['Cache hit',p.cacheHitRate+'%']].map(([k,v])=>row(k,v)).join('')}</table>
+    </div>
+    <div class="panel">
+      <div class="ph">Tiempos de Carga</div>
+      ${[['DNS Resolution',p.dnsResolution,30,80],['TCP Handshake',p.tcpHandshake,60,120],['TLS Handshake',p.tlsHandshake,100,200],['TTFB',p.ttfb,200,600],['DOM Loaded',p.domContentLoaded,1200,2500],['Fully Loaded',p.fullyLoaded,2000,5000]].map(([n,ms,ok,warn])=>{
+        const c=ms<=ok?'#059669':ms<=warn?'#d97706':'#dc2626';
+        const maxMs=p.fullyLoaded;
+        return `<div class="bar-row"><div class="bar-label"><span style="font-size:7pt;color:#475569">${n}</span><span style="font-size:7pt;font-family:monospace;color:${c}">${ms} ms</span></div><div class="bar-t"><div class="bar-f" style="width:${Math.round(ms/maxMs*100)}%;background:${c}"></div></div></div>`;
+      }).join('')}
+    </div>
+  </div>
+
+  <div class="two">
+    <div class="panel">
+      <div class="ph">TLS / SSL</div>
+      <table>${[
+        ['Versión TLS',p.tls?.version||'?'],['Cipher suite',p.tls?.cipher||'?'],
+        ['Emisor',p.tls?.certIssuer||'?'],['Vence',p.tls?.certExpiry||'?'],
+        ['HSTS',p.tls?.hsts?'✓ Activo':'✗ Ausente'],
+        ['OCSP Stapling',p.tls?.ocspStapling?'✓ Activo':'✗ Ausente'],
+        ['Cert Transparency',p.tls?.certTransparency?'✓ Activo':'✗ Ausente'],
+      ].map(([k,v])=>row(k,v)).join('')}</table>
+    </div>
+    <div class="panel">
+      <div class="ph">Web Vitals Estimados</div>
+      <table>${[
+        ['LCP',(p.lighthouseEstimates?.lcp||0)+' s','≤2.5s'],
+        ['FCP',(p.lighthouseEstimates?.fcp||0)+' s','≤1.8s'],
+        ['CLS',p.lighthouseEstimates?.cls||0,'≤0.1'],
+        ['TTI',(p.lighthouseEstimates?.tti||0)+' s','≤3.8s'],
+        ['TBT',(p.lighthouseEstimates?.tbt||0)+' ms','≤200ms'],
+      ].map(([k,v,ref])=>`<tr><td style="padding:5pt 8pt;font-size:8pt;color:#475569;border-bottom:0.5pt solid #f1f5f9">${k}</td><td style="padding:5pt 8pt;font-size:8pt;font-family:monospace;color:#0f172a;border-bottom:0.5pt solid #f1f5f9;text-align:right">${v}</td><td style="padding:5pt 8pt;font-size:6.5pt;font-family:monospace;color:#94a3b8;border-bottom:0.5pt solid #f1f5f9">ref: ${ref}</td></tr>`).join('')}</table>
+      <div style="margin-top:12pt">
+        <div class="ph">Stack Tecnológico</div>
+        <div style="display:flex;flex-wrap:wrap;gap:4pt;margin-top:4pt">
+          ${(p.techStack||[]).map(t=>`<span style="font-size:6pt;font-family:monospace;padding:2pt 7pt;background:#f1f5f9;border:0.5pt solid #e2e8f0;color:#475569">${t.name} <span style="color:#94a3b8">(${t.category})</span></span>`).join('')}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">Recomendaciones de Optimización</div>
+  ${(p.recommendations||[]).map(r=>`<div class="rec ${r.level}"><span class="rec-b">${r.level==='critical'?'🔴 Crítico':r.level==='warning'?'🟡 Advertencia':'ℹ Info'}</span><div class="rec-t"><strong>${r.title}</strong> — ${r.description}</div></div>`).join('')}
+
+  <div class="disclaimer">
+    ⚠ AVISO: Este informe de performance fue generado por análisis estimado con IA (ShellTI Scanner). Los valores son aproximaciones basadas en patrones técnicos observables del dominio analizado. No son mediciones directas en tiempo real. Para métricas definitivas se recomienda usar Google PageSpeed Insights (pagespeed.web.dev), GTmetrix o WebPageTest. No constituye auditoría técnica formal.<br>
+    Generado el ${dateStr} · ${timeStr} hrs · ShellTI Technology Consultancy · shellti.com · contacto@shellti.com
+  </div>
+  </body></html>`;
+
+  const w = window.open('', '_blank');
+  w.document.write(html);
+  w.document.close();
+}
+</script>
+</body>
+</html>

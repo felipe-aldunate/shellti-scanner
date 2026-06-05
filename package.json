@@ -1,0 +1,11 @@
+{
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.100.1",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "groq-sdk": "^1.2.1",
+    "openai": "^6.42.0",
+    "playwright": "^1.60.0"
+  }
+}

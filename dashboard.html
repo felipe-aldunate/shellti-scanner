@@ -1,0 +1,2355 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scanner · Auditoría de Datos · ShellTI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --deep:#020617;--deep2:#040d1e;--deep3:#060f1c;
+  --cyan:#00D4FF;--cyan2:#00b8e6;--cyan3:#7eeeff;
+  --green:#34D399;--green2:#22c587;
+  --silver:#E2E8F0;--muted:#94A3B8;
+  --border:rgba(0,212,255,0.13);--bh:rgba(0,212,255,0.32);
+  --card:rgba(3,9,24,0.93);
+  --danger:#FF6B6B;--warn:#F59E0B;--ok:#34D399;
+  --purple:#A78BFA;--purple2:rgba(167,139,250,0.15);
+}
+html{scroll-behavior:smooth}
+::-webkit-scrollbar{width:3px}
+::-webkit-scrollbar-track{background:var(--deep)}
+::-webkit-scrollbar-thumb{background:rgba(0,212,255,0.4);border-radius:2px}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--deep);color:var(--silver);line-height:1.7;overflow-x:hidden;min-height:100vh}
+body::before{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background-image:linear-gradient(rgba(0,212,255,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,255,0.03) 1px,transparent 1px);
+  background-size:48px 48px;
+}
+nav{
+  position:fixed;top:0;width:100%;z-index:300;height:64px;padding:0 2.5rem;
+  display:flex;align-items:center;justify-content:space-between;
+  background:rgba(2,6,23,0.95);backdrop-filter:blur(28px) saturate(200%);
+  border-bottom:1px solid var(--border);
+}
+.nav-brand-text{font-weight:800;font-size:1.1rem;color:var(--silver);letter-spacing:-.5px}
+.nav-brand-text span{color:var(--cyan)}
+.nav-brand-sub{font-family:'JetBrains Mono',monospace;font-size:.55rem;letter-spacing:2px;color:var(--muted);text-transform:uppercase}
+.nav-tag{font-family:'JetBrains Mono',monospace;font-size:.6rem;letter-spacing:2px;text-transform:uppercase;border:1px solid rgba(0,212,255,0.3);color:var(--cyan);padding:3px 10px;background:rgba(0,212,255,0.07)}
+
+.main{max-width:1100px;margin:0 auto;padding:110px 40px 60px;position:relative;z-index:1}
+
+/* SEARCH */
+.search-section{margin-bottom:48px}
+.search-label{font-family:'JetBrains Mono',monospace;font-size:.62rem;letter-spacing:2.5px;text-transform:uppercase;color:var(--green);margin-bottom:12px;display:flex;align-items:center;gap:10px}
+.search-label::before{content:'';width:20px;height:1px;background:var(--green);box-shadow:0 0 8px rgba(52,211,153,.7)}
+.search-bar{display:flex;border:1px solid var(--border);background:var(--card);transition:border-color .2s,box-shadow .2s}
+.search-bar:focus-within{border-color:rgba(0,212,255,0.5);box-shadow:0 0 0 3px rgba(0,212,255,0.08),0 0 32px rgba(0,212,255,0.1)}
+.search-bar input{flex:1;background:transparent;border:none;color:var(--silver);font-family:'JetBrains Mono',monospace;font-size:.88rem;padding:15px 20px;outline:none;letter-spacing:.5px}
+.search-bar input::placeholder{color:var(--muted)}
+.btn-clear{background:transparent;border:none;border-left:1px solid var(--border);color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:.68rem;letter-spacing:1.5px;text-transform:uppercase;padding:15px 18px;cursor:pointer;transition:color .2s,background .2s;white-space:nowrap}
+.btn-clear:hover{color:var(--danger);background:rgba(255,107,107,0.06)}
+.btn-scan{background:linear-gradient(135deg,var(--cyan),var(--cyan2));color:var(--deep);border:none;font-family:'JetBrains Mono',monospace;font-size:.68rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;padding:15px 28px;cursor:pointer;transition:opacity .2s,box-shadow .2s;white-space:nowrap}
+.btn-scan:hover{opacity:.9;box-shadow:0 0 28px rgba(0,212,255,0.4)}
+.btn-scan:disabled{opacity:.4;cursor:not-allowed}
+.status{display:none;align-items:center;gap:12px;margin-top:14px;font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--muted);letter-spacing:1px}
+.status.visible{display:flex}
+.spinner{width:12px;height:12px;border:2px solid rgba(0,212,255,0.2);border-top-color:var(--cyan);border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+.error-box{display:none;margin-top:12px;background:rgba(255,107,107,0.08);border:1px solid rgba(255,107,107,0.3);color:var(--danger);padding:12px 16px;font-family:'JetBrains Mono',monospace;font-size:.75rem}
+.error-box.visible{display:block}
+
+/* DASHBOARD */
+.dashboard{display:none;animation:fadeUp .4s ease}
+.dashboard.visible{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+
+/* HERO */
+.hero-card{
+  background:linear-gradient(135deg,rgba(4,13,30,0.97) 0%,rgba(6,15,28,0.97) 100%);
+  border:1px solid var(--border);padding:32px 36px;margin-bottom:1px;
+  display:flex;align-items:center;gap:32px;position:relative;overflow:hidden;
+}
+.hero-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--cyan),rgba(0,212,255,0.2))}
+.hero-card::after{content:'';position:absolute;top:-60px;right:-60px;width:200px;height:200px;border-radius:50%;background:radial-gradient(circle,rgba(0,212,255,0.06) 0%,transparent 70%);pointer-events:none}
+.semaforo-wrap{flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:8px}
+.semaforo-lights{display:flex;flex-direction:column;gap:6px;background:rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.06);padding:10px 8px;border-radius:8px}
+.s-light{width:22px;height:22px;border-radius:50%;transition:box-shadow .4s}
+.s-rojo{background:#FF6B6B}.s-amarillo{background:#F59E0B}.s-verde{background:#34D399}
+.s-off{filter:brightness(0.2);box-shadow:none}
+.s-on-rojo{filter:brightness(1);box-shadow:0 0 12px #FF6B6B,0 0 28px rgba(255,107,107,0.7)}
+.s-on-amarillo{filter:brightness(1);box-shadow:0 0 12px #F59E0B,0 0 28px rgba(245,158,11,0.7)}
+.s-on-verde{filter:brightness(1);box-shadow:0 0 12px #34D399,0 0 28px rgba(52,211,153,0.7)}
+.semaforo-label{font-family:'JetBrains Mono',monospace;font-size:.55rem;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted)}
+.hero-info{flex:1}
+.hero-overline{font-family:'JetBrains Mono',monospace;font-size:.62rem;letter-spacing:2px;text-transform:uppercase;color:var(--green);margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.hero-overline::before{content:'';width:16px;height:1px;background:var(--green)}
+.hero-title{font-size:1.6rem;font-weight:800;color:var(--silver);line-height:1.15;margin-bottom:6px}
+.hero-url{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--cyan);margin-bottom:10px}
+.hero-nivel{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:.6rem;letter-spacing:1.5px;text-transform:uppercase;padding:3px 12px}
+.nivel-incipiente{background:rgba(255,107,107,0.12);color:var(--danger);border:1px solid rgba(255,107,107,0.3)}
+.nivel-basico,.nivel-intermedio{background:rgba(245,158,11,0.12);color:var(--warn);border:1px solid rgba(245,158,11,0.3)}
+.nivel-avanzado{background:rgba(52,211,153,0.12);color:var(--ok);border:1px solid rgba(52,211,153,0.3)}
+.hero-score{flex-shrink:0;text-align:center}
+.score-num{font-size:3.5rem;font-weight:800;line-height:1}
+.score-den{font-family:'JetBrains Mono',monospace;font-size:.6rem;letter-spacing:1.5px;color:var(--muted);margin-top:4px}
+
+/* SCORE BAR */
+.score-bar-wrap{margin-top:10px;width:80px}
+.score-bar-track{height:3px;background:rgba(255,255,255,0.07);border-radius:2px;overflow:hidden}
+.score-bar-fill{height:100%;border-radius:2px;transition:width .8s ease}
+
+/* RESUMEN */
+.resumen-card{background:rgba(0,212,255,0.04);border:1px solid var(--border);border-top:none;padding:18px 36px;margin-bottom:32px}
+.resumen-label{font-family:'JetBrains Mono',monospace;font-size:.58rem;letter-spacing:2px;text-transform:uppercase;color:var(--cyan);margin-bottom:6px}
+.resumen-text{font-size:.85rem;color:var(--muted);line-height:1.8;font-weight:300;font-style:italic}
+
+/* KPI STRIP — NUEVO */
+.kpi-strip{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;background:var(--border);margin-bottom:32px}
+.kpi-cell{background:var(--card);padding:16px 18px;text-align:center}
+.kpi-val{font-size:1.6rem;font-weight:800;line-height:1;margin-bottom:4px}
+.kpi-label{font-family:'JetBrains Mono',monospace;font-size:.52rem;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted)}
+.kpi-val-danger{color:var(--danger)}
+.kpi-val-warn{color:var(--warn)}
+.kpi-val-ok{color:var(--ok)}
+.kpi-val-cyan{color:var(--cyan)}
+.kpi-val-purple{color:var(--purple)}
+
+/* CHECKS */
+.checks-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);margin-bottom:32px}
+.check-card{background:var(--card);padding:20px 22px}
+.check-card-label{font-family:'JetBrains Mono',monospace;font-size:.58rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:14px}
+.check-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;font-size:.82rem;color:var(--silver)}
+.dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.dot-ok{background:var(--ok);box-shadow:0 0 5px rgba(52,211,153,.6)}
+.dot-fail{background:var(--danger);box-shadow:0 0 5px rgba(255,107,107,.6)}
+.tracker-tag{display:inline-block;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);color:var(--warn);font-family:'JetBrains Mono',monospace;font-size:.65rem;padding:3px 9px;margin:2px 2px 0 0}
+.no-trackers{font-family:'JetBrains Mono',monospace;font-size:.75rem;color:var(--ok)}
+
+/* RADAR EXPERTO — NUEVO */
+.expert-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);margin-bottom:32px}
+.expert-panel{background:var(--card);padding:22px 24px}
+.expert-panel-title{font-family:'JetBrains Mono',monospace;font-size:.6rem;letter-spacing:2.5px;text-transform:uppercase;color:var(--cyan);margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.expert-panel-title::before{content:'';width:14px;height:1px;background:var(--cyan);box-shadow:0 0 6px rgba(0,212,255,.6)}
+
+/* DIMENSIONES LEY 21719 */
+.dim-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.dim-label{font-family:'JetBrains Mono',monospace;font-size:.62rem;color:var(--muted);flex:0 0 160px;letter-spacing:.5px}
+.dim-bar-track{flex:1;height:4px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden}
+.dim-bar-fill{height:100%;border-radius:2px}
+.dim-score{font-family:'JetBrains Mono',monospace;font-size:.6rem;color:var(--muted);flex:0 0 28px;text-align:right}
+.dim-ok .dim-bar-fill{background:var(--ok);box-shadow:0 0 6px rgba(52,211,153,.4)}
+.dim-warn .dim-bar-fill{background:var(--warn);box-shadow:0 0 6px rgba(245,158,11,.4)}
+.dim-fail .dim-bar-fill{background:var(--danger);box-shadow:0 0 6px rgba(255,107,107,.4)}
+
+/* TRANSFERENCIAS INTERNACIONALES — NUEVO */
+.transfer-list{display:flex;flex-direction:column;gap:6px}
+.transfer-item{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;background:rgba(245,158,11,0.05);border:1px solid rgba(245,158,11,0.15)}
+.transfer-icon{font-size:.8rem;flex-shrink:0;margin-top:2px}
+.transfer-name{font-family:'JetBrains Mono',monospace;font-size:.68rem;color:var(--warn);display:block;margin-bottom:2px}
+.transfer-art{font-family:'JetBrains Mono',monospace;font-size:.58rem;color:var(--muted)}
+.no-transfer{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--ok)}
+
+/* FORMULARIOS EXPERTO — NUEVO */
+.form-list{display:flex;flex-direction:column;gap:8px}
+.form-item{background:rgba(0,212,255,0.03);border:1px solid rgba(0,212,255,0.1);padding:10px 14px}
+.form-action{font-family:'JetBrains Mono',monospace;font-size:.6rem;color:var(--cyan);margin-bottom:8px;word-break:break-all}
+.form-fields{display:flex;flex-wrap:wrap;gap:4px}
+.form-field{font-family:'JetBrains Mono',monospace;font-size:.58rem;padding:2px 8px;border:1px solid rgba(0,212,255,0.15);color:var(--muted)}
+.form-field.sensitive{border-color:rgba(255,107,107,0.4);color:var(--danger);background:rgba(255,107,107,0.06)}
+.form-field.warn-field{border-color:rgba(245,158,11,0.4);color:var(--warn);background:rgba(245,158,11,0.06)}
+.no-forms{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--muted)}
+
+/* SANCIÓN ESTIMADA — NUEVO */
+.sancion-box{background:rgba(255,107,107,0.05);border:1px solid rgba(255,107,107,0.2);padding:16px 18px;margin-bottom:32px}
+.sancion-hd{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.sancion-title{font-family:'JetBrains Mono',monospace;font-size:.6rem;letter-spacing:2px;text-transform:uppercase;color:var(--danger)}
+.sancion-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.sancion-item{text-align:center}
+.sancion-val{font-size:1.2rem;font-weight:800;color:var(--danger);line-height:1}
+.sancion-sub{font-family:'JetBrains Mono',monospace;font-size:.52rem;color:var(--muted);margin-top:3px;letter-spacing:.5px}
+.sancion-nota{font-family:'JetBrains Mono',monospace;font-size:.6rem;color:rgba(255,107,107,0.6);margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,107,107,0.1)}
+
+/* ISO CONTROLES — NUEVO */
+.iso-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:6px}
+.iso-ctrl{display:flex;align-items:center;gap:8px;padding:7px 10px;background:rgba(0,212,255,0.03);border:1px solid rgba(0,212,255,0.08)}
+.iso-ctrl-code{font-family:'JetBrains Mono',monospace;font-size:.55rem;color:var(--cyan);flex:0 0 52px;letter-spacing:.5px}
+.iso-ctrl-label{font-size:.72rem;color:var(--muted);flex:1}
+.iso-ctrl-status{font-size:.7rem;flex-shrink:0}
+
+/* SECTION */
+.section-hd{display:flex;align-items:center;gap:12px;padding:12px 0 10px;margin-bottom:1px;border-top:1px solid var(--border)}
+.section-hd-title{font-family:'JetBrains Mono',monospace;font-size:.65rem;letter-spacing:2.5px;text-transform:uppercase;color:var(--green);display:flex;align-items:center;gap:8px}
+.section-hd-title::before{content:'';width:16px;height:1px;background:var(--green);box-shadow:0 0 8px rgba(52,211,153,.7)}
+.section-count{font-family:'JetBrains Mono',monospace;font-size:.6rem;background:rgba(0,212,255,0.08);border:1px solid var(--border);color:var(--cyan);padding:2px 8px}
+.section-filter{display:flex;gap:4px;margin-left:auto}
+.filter-btn{font-family:'JetBrains Mono',monospace;font-size:.55rem;letter-spacing:1px;text-transform:uppercase;border:1px solid var(--border);background:transparent;color:var(--muted);padding:2px 8px;cursor:pointer;transition:all .2s}
+.filter-btn:hover,.filter-btn.active{background:rgba(0,212,255,0.08);color:var(--cyan);border-color:rgba(0,212,255,0.3)}
+.filter-btn.f-rojo.active{background:rgba(255,107,107,0.1);color:var(--danger);border-color:rgba(255,107,107,0.3)}
+.filter-btn.f-amarillo.active{background:rgba(245,158,11,0.1);color:var(--warn);border-color:rgba(245,158,11,0.3)}
+.filter-btn.f-verde.active{background:rgba(52,211,153,0.1);color:var(--ok);border-color:rgba(52,211,153,0.3)}
+
+/* HALLAZGOS */
+.hallazgo{background:var(--card);border:1px solid transparent;margin-bottom:1px;overflow:hidden;transition:border-color .2s}
+.hallazgo:hover{border-color:var(--border)}
+.hallazgo.hidden{display:none}
+.hallazgo-hd{display:flex;align-items:stretch;cursor:pointer}
+.sem-bar{width:3px;flex-shrink:0}
+.bar-rojo{background:var(--danger)}.bar-amarillo{background:var(--warn)}.bar-verde{background:var(--ok)}
+.hallazgo-hd-main{flex:1;padding:14px 18px}
+.hallazgo-meta{display:flex;align-items:center;gap:8px;margin-bottom:5px;flex-wrap:wrap}
+.hallazgo-id{font-family:'JetBrains Mono',monospace;font-size:.58rem;color:var(--muted);letter-spacing:1px}
+.cat-tag{font-family:'JetBrains Mono',monospace;font-size:.55rem;letter-spacing:1px;text-transform:uppercase;border:1px solid rgba(0,212,255,0.2);color:var(--muted);padding:1px 7px}
+.hallazgo-desc{font-size:.87rem;color:var(--silver);font-weight:600}
+.toggle-btn{padding:14px 16px;display:flex;align-items:center;color:var(--muted);font-size:.65rem;flex-shrink:0}
+.hallazgo-body{display:none;padding:0 18px 16px 21px;border-top:1px solid rgba(0,212,255,0.07)}
+.hallazgo-body.open{display:block}
+.hallazgo-obs{font-size:.82rem;color:var(--muted);line-height:1.75;margin:12px 0}
+.hallazgo-impacto{font-size:.78rem;background:rgba(255,107,107,0.06);border-left:2px solid rgba(255,107,107,0.4);padding:10px 14px;color:rgba(255,180,180,0.85);margin-bottom:14px;line-height:1.7}
+.hallazgo-impacto strong{display:block;font-family:'JetBrains Mono',monospace;font-size:.58rem;letter-spacing:1.5px;text-transform:uppercase;color:var(--danger);margin-bottom:4px}
+
+/* ARTÍCULOS DESTACADOS en hallazgo — NUEVO */
+.art-chips{display:flex;flex-wrap:wrap;gap:4px;margin:8px 0 12px}
+.art-chip{font-family:'JetBrains Mono',monospace;font-size:.55rem;padding:2px 8px;border-radius:2px;letter-spacing:.5px}
+.art-chip-21719{background:rgba(167,139,250,0.12);border:1px solid rgba(167,139,250,0.3);color:var(--purple)}
+.art-chip-iso{background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.2);color:var(--cyan)}
+.art-chip-gdpr{background:rgba(52,211,153,0.08);border:1px solid rgba(52,211,153,0.2);color:var(--ok)}
+.art-chip-nist{background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);color:var(--warn)}
+
+/* NORMAS */
+.norma-list{display:flex;flex-direction:column;gap:6px;margin-top:12px}
+.norma-item{background:rgba(0,212,255,0.04);border:1px solid rgba(0,212,255,0.1);padding:10px 14px}
+.norma-hd{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.norma-ley{font-family:'JetBrains Mono',monospace;font-size:.58rem;letter-spacing:1px;text-transform:uppercase;padding:2px 7px}
+.norma-ley-21719{background:rgba(167,139,250,0.12);border:1px solid rgba(167,139,250,0.3);color:var(--purple)}
+.norma-ley-iso{background:rgba(0,212,255,0.1);border:1px solid rgba(0,212,255,0.25);color:var(--cyan)}
+.norma-ley-gdpr{background:rgba(52,211,153,0.08);border:1px solid rgba(52,211,153,0.2);color:var(--ok)}
+.norma-ley-nist{background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);color:var(--warn)}
+.norma-art{font-family:'JetBrains Mono',monospace;font-size:.62rem;color:var(--muted)}
+.norma-desc{font-size:.78rem;color:var(--muted);line-height:1.65;font-weight:300}
+
+/* RECS */
+.rec{background:var(--card);border:1px solid transparent;margin-bottom:1px;overflow:hidden;transition:border-color .2s}
+.rec:hover{border-color:var(--border)}
+.rec.hidden{display:none}
+.rec-hd{display:flex;align-items:stretch;cursor:pointer}
+.rec-main{flex:1;padding:13px 18px}
+.rec-meta{display:flex;align-items:center;gap:8px;margin-bottom:5px;flex-wrap:wrap}
+.prioridad{font-family:'JetBrains Mono',monospace;font-size:.58rem;letter-spacing:1.5px;text-transform:uppercase;padding:2px 9px}
+.p-alta{background:rgba(255,107,107,0.12);color:var(--danger);border:1px solid rgba(255,107,107,0.3)}
+.p-media{background:rgba(245,158,11,0.12);color:var(--warn);border:1px solid rgba(245,158,11,0.3)}
+.p-baja{background:rgba(52,211,153,0.12);color:var(--ok);border:1px solid rgba(52,211,153,0.3)}
+.plazo{font-family:'JetBrains Mono',monospace;font-size:.58rem;color:var(--muted)}
+.rec-desc{font-size:.86rem;color:var(--silver);font-weight:500;line-height:1.5}
+.rec-body{display:none;padding:0 18px 14px 21px;border-top:1px solid rgba(0,212,255,0.07)}
+.rec-body.open{display:block}
+
+.nota{margin-top:40px;padding:14px 18px;border:1px solid rgba(0,212,255,0.1);background:rgba(0,212,255,0.03);font-family:'JetBrains Mono',monospace;font-size:.65rem;color:var(--muted);line-height:1.8}
+.sem-emoji{font-size:.8rem}
+
+/* DERECHOS ARCO TABLE — NUEVO */
+.arco-table{width:100%;border-collapse:collapse}
+.arco-table td,.arco-table th{padding:7px 10px;font-size:.75rem;border-bottom:1px solid rgba(0,212,255,0.06)}
+.arco-table th{font-family:'JetBrains Mono',monospace;font-size:.55rem;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);font-weight:400}
+.arco-table td:first-child{font-family:'JetBrains Mono',monospace;font-size:.65rem;color:var(--cyan)}
+.arco-dot{display:inline-block;width:8px;height:8px;border-radius:50%}
+
+/* CATEGORÍA EXPERTO colors */
+.cat-Privacidad{border-color:rgba(167,139,250,0.4)!important;color:var(--purple)!important}
+.cat-Seguridad{border-color:rgba(0,212,255,0.4)!important;color:var(--cyan)!important}
+.cat-Cookies{border-color:rgba(245,158,11,0.4)!important;color:var(--warn)!important}
+.cat-Trackers{border-color:rgba(245,158,11,0.4)!important;color:var(--warn)!important}
+.cat-Derechos{border-color:rgba(52,211,153,0.4)!important;color:var(--ok)!important}
+.cat-Formularios{border-color:rgba(0,212,255,0.3)!important;color:var(--cyan)!important}
+.cat-Transferencias{border-color:rgba(255,107,107,0.4)!important;color:var(--danger)!important}
+.cat-DatosSensibles{border-color:rgba(255,107,107,0.4)!important;color:var(--danger)!important}
+.cat-Accountability{border-color:rgba(167,139,250,0.4)!important;color:var(--purple)!important}
+
+@media(max-width:768px){
+  .main{padding:80px 16px 40px}
+  .hero-card{flex-direction:column;gap:20px;padding:20px}
+  .kpi-strip{grid-template-columns:repeat(3,1fr)}
+  .expert-grid{grid-template-columns:1fr}
+  .checks-grid{grid-template-columns:1fr}
+  .sancion-grid{grid-template-columns:repeat(2,1fr)}
+  .iso-grid{grid-template-columns:1fr}
+}
+
+/* SCORE INFO BTN */
+.score-info-btn{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:16px;height:16px;border-radius:50%;
+  background:rgba(0,212,255,0.12);border:1px solid rgba(0,212,255,0.35);
+  color:var(--cyan);font-size:.6rem;font-weight:700;font-family:'JetBrains Mono',monospace;
+  cursor:pointer;margin-left:6px;vertical-align:middle;
+  transition:background .2s,box-shadow .2s;flex-shrink:0;line-height:1;
+}
+.score-info-btn:hover{background:rgba(0,212,255,0.25);box-shadow:0 0 10px rgba(0,212,255,0.4)}
+
+/* MODAL OVERLAY */
+.modal-overlay{
+  display:none;position:fixed;inset:0;z-index:900;
+  background:rgba(2,6,23,0.88);backdrop-filter:blur(12px) saturate(180%);
+  align-items:center;justify-content:center;padding:20px;
+}
+.modal-overlay.open{display:flex}
+
+/* MODAL BOX */
+.modal-box{
+  background:linear-gradient(155deg,rgba(4,13,30,0.99) 0%,rgba(6,15,28,0.99) 100%);
+  border:1px solid rgba(0,212,255,0.22);
+  max-width:780px;width:100%;max-height:88vh;overflow-y:auto;
+  position:relative;animation:modalIn .25s ease;
+}
+@keyframes modalIn{from{opacity:0;transform:translateY(16px) scale(.98)}to{opacity:1;transform:none}}
+.modal-box::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--cyan),rgba(0,212,255,0.15))}
+
+.modal-hd{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:22px 28px 18px;border-bottom:1px solid rgba(0,212,255,0.1);
+  position:sticky;top:0;background:rgba(4,13,30,0.98);z-index:1;
+}
+.modal-hd-title{font-family:'JetBrains Mono',monospace;font-size:.72rem;letter-spacing:2.5px;text-transform:uppercase;color:var(--cyan);display:flex;align-items:center;gap:10px}
+.modal-hd-title::before{content:'';width:18px;height:1px;background:var(--cyan);box-shadow:0 0 8px rgba(0,212,255,.7)}
+.modal-close{background:transparent;border:1px solid rgba(0,212,255,0.2);color:var(--muted);font-size:.75rem;width:28px;height:28px;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center}
+.modal-close:hover{border-color:var(--danger);color:var(--danger);background:rgba(255,107,107,0.08)}
+
+.modal-body{padding:28px}
+
+/* MODAL SECTIONS */
+.m-section{margin-bottom:28px}
+.m-section:last-child{margin-bottom:0}
+.m-section-title{
+  font-family:'JetBrains Mono',monospace;font-size:.6rem;letter-spacing:2.5px;
+  text-transform:uppercase;color:var(--green);margin-bottom:14px;
+  display:flex;align-items:center;gap:8px;
+}
+.m-section-title::before{content:'';width:14px;height:1px;background:var(--green);box-shadow:0 0 6px rgba(52,211,153,.6)}
+.m-section-desc{font-size:.82rem;color:var(--muted);line-height:1.8;font-weight:300;margin-bottom:14px}
+
+/* FORMULA BOX */
+.m-formula{
+  background:rgba(0,212,255,0.04);border:1px solid rgba(0,212,255,0.14);
+  padding:16px 20px;font-family:'JetBrains Mono',monospace;font-size:.75rem;
+  color:var(--cyan);line-height:2;margin-bottom:16px;
+}
+.m-formula span{color:var(--silver)}
+.m-formula strong{color:var(--cyan2)}
+
+/* DIMENSIONES TABLE */
+.m-dim-table{width:100%;border-collapse:collapse;margin-bottom:6px}
+.m-dim-table th{
+  font-family:'JetBrains Mono',monospace;font-size:.52rem;letter-spacing:1.5px;
+  text-transform:uppercase;color:var(--muted);font-weight:400;
+  padding:7px 10px;border-bottom:1px solid rgba(0,212,255,0.1);text-align:left;
+}
+.m-dim-table td{padding:9px 10px;font-size:.78rem;border-bottom:1px solid rgba(0,212,255,0.05);color:var(--silver);vertical-align:top;line-height:1.5}
+.m-dim-table td:first-child{font-family:'JetBrains Mono',monospace;font-size:.65rem;color:var(--cyan);white-space:nowrap}
+.m-dim-table td:nth-child(3){font-size:.7rem;color:var(--muted)}
+.m-dim-table tr:hover td{background:rgba(0,212,255,0.025)}
+
+/* RANGOS */
+.m-rangos{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:6px}
+.m-rango{border:1px solid;padding:14px 12px;text-align:center}
+.m-rango-num{font-size:1.1rem;font-weight:800;line-height:1;margin-bottom:4px}
+.m-rango-label{font-family:'JetBrains Mono',monospace;font-size:.52rem;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}
+.m-rango-desc{font-size:.68rem;color:var(--muted);line-height:1.5}
+.m-rango-sem{font-size:.85rem;margin-bottom:4px}
+.rango-incipiente{border-color:rgba(255,107,107,0.3);background:rgba(255,107,107,0.05)}
+.rango-incipiente .m-rango-num,.rango-incipiente .m-rango-label{color:var(--danger)}
+.rango-basico{border-color:rgba(245,158,11,0.3);background:rgba(245,158,11,0.04)}
+.rango-basico .m-rango-num,.rango-basico .m-rango-label{color:var(--warn)}
+.rango-intermedio{border-color:rgba(245,158,11,0.3);background:rgba(245,158,11,0.04)}
+.rango-intermedio .m-rango-num,.rango-intermedio .m-rango-label{color:var(--warn)}
+.rango-avanzado{border-color:rgba(52,211,153,0.3);background:rgba(52,211,153,0.04)}
+.rango-avanzado .m-rango-num,.rango-avanzado .m-rango-label{color:var(--ok)}
+
+/* PENALIDADES */
+.m-pen-list{display:flex;flex-direction:column;gap:6px}
+.m-pen-item{
+  display:flex;align-items:flex-start;gap:12px;padding:10px 14px;
+  background:rgba(255,107,107,0.04);border:1px solid rgba(255,107,107,0.12);
+}
+.m-pen-badge{
+  font-family:'JetBrains Mono',monospace;font-size:.55rem;letter-spacing:1px;
+  text-transform:uppercase;padding:2px 8px;white-space:nowrap;flex-shrink:0;
+  background:rgba(255,107,107,0.12);border:1px solid rgba(255,107,107,0.3);color:var(--danger);
+}
+.m-pen-badge.warn{background:rgba(245,158,11,0.12);border-color:rgba(245,158,11,0.3);color:var(--warn)}
+.m-pen-text{font-size:.77rem;color:var(--muted);line-height:1.6}
+
+/* BONUS */
+.m-bonus-list{display:flex;flex-direction:column;gap:6px}
+.m-bonus-item{
+  display:flex;align-items:flex-start;gap:12px;padding:10px 14px;
+  background:rgba(52,211,153,0.04);border:1px solid rgba(52,211,153,0.12);
+}
+.m-bonus-badge{
+  font-family:'JetBrains Mono',monospace;font-size:.55rem;letter-spacing:1px;
+  text-transform:uppercase;padding:2px 8px;white-space:nowrap;flex-shrink:0;
+  background:rgba(52,211,153,0.12);border:1px solid rgba(52,211,153,0.3);color:var(--ok);
+}
+.m-bonus-text{font-size:.77rem;color:var(--muted);line-height:1.6}
+
+/* EXAMPLE CALC */
+.m-example{
+  background:rgba(167,139,250,0.05);border:1px solid rgba(167,139,250,0.18);
+  padding:16px 20px;margin-top:4px;
+}
+.m-example-title{font-family:'JetBrains Mono',monospace;font-size:.58rem;letter-spacing:1.5px;text-transform:uppercase;color:var(--purple);margin-bottom:12px}
+.m-example-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid rgba(167,139,250,0.07);font-size:.78rem}
+.m-example-row:last-child{border-bottom:none;font-weight:700;padding-top:10px;margin-top:4px;border-top:1px solid rgba(167,139,250,0.15)}
+.m-example-row span:first-child{color:var(--muted)}
+.m-example-row span:last-child{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--purple)}
+
+/* DIVIDER */
+.m-divider{height:1px;background:rgba(0,212,255,0.08);margin:24px 0}
+
+@media(max-width:768px){
+  .m-rangos{grid-template-columns:repeat(2,1fr)}
+  .modal-body{padding:18px}
+  .modal-hd{padding:16px 18px 14px}
+}
+
+/* EXPORT BTN */
+.btn-export{
+  background:transparent;border:1px solid rgba(0,212,255,0.35);
+  color:var(--cyan);font-family:'JetBrains Mono',monospace;font-size:.62rem;
+  font-weight:600;letter-spacing:1.5px;text-transform:uppercase;
+  padding:7px 16px;cursor:pointer;transition:all .2s;
+  display:inline-flex;align-items:center;gap:7px;
+}
+.btn-export:hover{background:rgba(0,212,255,0.1);box-shadow:0 0 16px rgba(0,212,255,0.2);border-color:rgba(0,212,255,0.6)}
+
+/* ===================== PRINT / PDF STYLES (legacy — PDF now opens in new window) ===================== */
+@media print {
+  /* Reset & base */
+  *,*::before,*::after{box-sizing:border-box!important}
+  html,body{
+    background:#ffffff!important;color:#0f172a!important;
+    font-family:'Plus Jakarta Sans',Arial,sans-serif!important;
+    font-size:9.5pt!important;line-height:1.5!important;
+    margin:0!important;padding:0!important;overflow:visible!important;
+  }
+
+  /* Hide UI chrome */
+  nav,.search-section,.btn-export,.score-info-btn,
+  .modal-overlay,.nota,.section-filter,
+  .toggle-btn,.hallazgo-body,.rec-body,
+  .status,.error-box{display:none!important}
+
+  /* Show dashboard even if not .visible */
+  .dashboard{display:block!important;animation:none!important}
+
+  /* Page setup */
+  @page{
+    size:A4;
+    margin:18mm 16mm 22mm 16mm;
+  }
+  @page:first{margin-top:8mm}
+
+  /* PDF COVER HEADER — injected via JS before print */
+  #pdf-header{
+    display:block!important;
+    border-bottom:2.5pt solid #00D4FF;
+    padding-bottom:10pt;margin-bottom:18pt;
+    page-break-after:avoid;
+  }
+  #pdf-header-inner{display:flex!important;align-items:center;justify-content:space-between;gap:12pt}
+  #pdf-logo-area{display:flex!important;flex-direction:column;gap:3pt}
+  #pdf-logo-name{font-size:18pt;font-weight:800;color:#0f172a;letter-spacing:-0.5pt}
+  #pdf-logo-name span{color:#0284c7}
+  #pdf-logo-sub{font-size:6.5pt;letter-spacing:2pt;text-transform:uppercase;color:#64748b;font-family:'JetBrains Mono',monospace}
+  #pdf-meta-area{text-align:right}
+  #pdf-report-label{font-size:6pt;letter-spacing:2.5pt;text-transform:uppercase;color:#64748b;font-family:'JetBrains Mono',monospace;margin-bottom:3pt}
+  #pdf-target-name{font-size:11pt;font-weight:700;color:#0f172a}
+  #pdf-target-url{font-size:7.5pt;color:#0284c7;font-family:'JetBrains Mono',monospace}
+  #pdf-date-line{font-size:6.5pt;color:#94a3b8;font-family:'JetBrains Mono',monospace;margin-top:2pt}
+
+  /* PDF FOOTER */
+  #pdf-footer{
+    display:block!important;
+    position:fixed;bottom:0;left:0;right:0;
+    border-top:1pt solid #e2e8f0;
+    padding-top:6pt;
+    display:flex!important;justify-content:space-between;align-items:center;
+  }
+  #pdf-footer-left{font-size:6pt;color:#94a3b8;font-family:'JetBrains Mono',monospace}
+  #pdf-footer-right{font-size:6pt;color:#94a3b8;font-family:'JetBrains Mono',monospace;text-align:right}
+
+  /* HERO CARD */
+  .hero-card{
+    background:#f8fafc!important;border:1pt solid #e2e8f0!important;
+    padding:12pt 14pt!important;margin-bottom:2pt!important;
+    display:flex!important;align-items:center!important;gap:16pt!important;
+    page-break-inside:avoid!important;
+  }
+  .hero-card::before,.hero-card::after{display:none!important}
+  .hero-title{font-size:13pt!important;color:#0f172a!important}
+  .hero-url{color:#0284c7!important;font-size:7.5pt!important}
+  .hero-overline{color:#059669!important;font-size:6pt!important}
+  .hero-overline::before{display:none!important}
+  .score-num{font-size:28pt!important;color:#0f172a!important}
+  .score-den{color:#64748b!important;font-size:6pt!important}
+  .score-bar-wrap{width:60pt!important}
+  .score-bar-track{background:#e2e8f0!important}
+  .score-bar-fill{print-color-adjust:exact!important;-webkit-print-color-adjust:exact!important}
+  .hero-nivel{font-size:6pt!important;print-color-adjust:exact!important;-webkit-print-color-adjust:exact!important}
+  .semaforo-lights{background:#f1f5f9!important;border-color:#e2e8f0!important}
+  .s-light{print-color-adjust:exact!important;-webkit-print-color-adjust:exact!important}
+  .s-off{filter:brightness(0.35) saturate(0)!important}
+
+  /* RESUMEN */
+  .resumen-card{
+    background:#f8fafc!important;border:1pt solid #e2e8f0!important;
+    border-top:none!important;padding:10pt 14pt!important;margin-bottom:14pt!important;
+  }
+  .resumen-label{color:#0284c7!important;font-size:6pt!important}
+  .resumen-text{color:#334155!important;font-size:8.5pt!important}
+
+  /* KPI STRIP */
+  .kpi-strip{
+    background:#e2e8f0!important;gap:0.5pt!important;margin-bottom:14pt!important;
+    grid-template-columns:repeat(5,1fr)!important;
+  }
+  .kpi-cell{background:#f8fafc!important;padding:8pt 6pt!important;text-align:center!important}
+  .kpi-val{font-size:16pt!important;print-color-adjust:exact!important;-webkit-print-color-adjust:exact!important}
+  .kpi-val-danger{color:#dc2626!important}
+  .kpi-val-warn{color:#d97706!important}
+  .kpi-val-ok{color:#059669!important}
+  .kpi-val-cyan{color:#0284c7!important}
+  .kpi-val-purple{color:#7c3aed!important}
+  .kpi-label{font-size:5pt!important;color:#64748b!important}
+
+  /* CHECKS */
+  .checks-grid{
+    background:#e2e8f0!important;gap:0.5pt!important;margin-bottom:14pt!important;
+    grid-template-columns:repeat(3,1fr)!important;
+  }
+  .check-card{background:#f8fafc!important;padding:10pt 12pt!important}
+  .check-card-label{color:#64748b!important;font-size:5.5pt!important}
+  .check-row{font-size:8pt!important;color:#0f172a!important}
+  .dot-ok{background:#059669!important;print-color-adjust:exact!important;-webkit-print-color-adjust:exact!important}
+  .dot-fail{background:#dc2626!important;print-color-adjust:exact!important;-webkit-print-color-adjust:exact!important}
+  .tracker-tag{background:#fef3c7!important;border-color:#d97706!important;color:#92400e!important;print-color-adjust:exact!important;-webkit-print-color-adjust:exact!important}
+  .no-trackers{color:#059669!important}
+
+  /* SANCION */
+  .sancion-box{
+    background:#fff5f5!important;border:1pt solid #fecaca!important;
+    padding:10pt 12pt!important;margin-bottom:14pt!important;
+    page-break-inside:avoid!important;
+  }
+  .sancion-title{color:#dc2626!important;font-size:6pt!important}
+  .sancion-val{color:#dc2626!important;font-size:12pt!important;print-color-adjust:exact!important;-webkit-print-color-adjust:exact!important}
+  .sancion-sub{color:#94a3b8!important;font-size:5.5pt!important}
+  .sancion-nota{color:#f87171!important;font-size:6pt!important;border-top-color:#fecaca!important}
+  .sancion-grid{grid-template-columns:repeat(3,1fr)!important}
+
+  /* EXPERT PANELS */
+  .expert-grid{
+    grid-template-columns:1fr 1fr!important;background:#e2e8f0!important;
+    gap:0.5pt!important;margin-bottom:14pt!important;
+  }
+  .expert-panel{background:#f8fafc!important;padding:10pt 12pt!important;page-break-inside:avoid!important}
+  .expert-panel-title{color:#0284c7!important;font-size:6pt!important;margin-bottom:8pt!important}
+  .expert-panel-title::before{background:#0284c7!important;print-color-adjust:exact!important}
+
+  /* DIMENSIONES */
+  .dim-label{color:#475569!important;font-size:7pt!important}
+  .dim-bar-track{background:#e2e8f0!important}
+  .dim-bar-fill{print-color-adjust:exact!important;-webkit-print-color-adjust:exact!important}
+  .dim-ok .dim-bar-fill{background:#059669!important}
+  .dim-warn .dim-bar-fill{background:#d97706!important}
+  .dim-fail .dim-bar-fill{background:#dc2626!important}
+  .dim-score{color:#64748b!important;font-size:6pt!important}
+
+  /* ISO CONTROLES */
+  .iso-grid{grid-template-columns:repeat(2,1fr)!important;gap:3pt!important}
+  .iso-ctrl{background:#f1f5f9!important;border-color:#e2e8f0!important;padding:4pt 6pt!important}
+  .iso-ctrl-code{color:#0284c7!important;font-size:5.5pt!important}
+  .iso-ctrl-label{font-size:7pt!important;color:#475569!important}
+  .iso-ctrl-status{font-size:7pt!important}
+
+  /* TRANSFERENCIAS */
+  .transfer-item{background:#fffbeb!important;border-color:#fde68a!important}
+  .transfer-name{color:#92400e!important}
+  .transfer-art{color:#78716c!important;font-size:6pt!important}
+  .no-transfer{color:#059669!important}
+
+  /* ARCO TABLE */
+  .arco-table td,.arco-table th{font-size:7.5pt!important;color:#0f172a!important;border-bottom-color:#e2e8f0!important}
+  .arco-table td:first-child{color:#0284c7!important;font-size:7pt!important}
+  .arco-table th{color:#64748b!important;font-size:5.5pt!important}
+
+  /* FORM LIST */
+  .form-item{background:#f1f5f9!important;border-color:#e2e8f0!important}
+  .form-action{color:#0284c7!important;font-size:6.5pt!important}
+  .form-field{border-color:#e2e8f0!important;color:#64748b!important;font-size:6pt!important}
+  .form-field.sensitive{background:#fff1f2!important;border-color:#fca5a5!important;color:#dc2626!important;print-color-adjust:exact!important}
+  .form-field.warn-field{background:#fffbeb!important;border-color:#fcd34d!important;color:#92400e!important;print-color-adjust:exact!important}
+
+  /* SECTION HEADERS */
+  .section-hd{border-top-color:#e2e8f0!important;padding:8pt 0 6pt!important}
+  .section-hd-title{color:#059669!important;font-size:7pt!important}
+  .section-hd-title::before{background:#059669!important;print-color-adjust:exact!important}
+  .section-count{background:#f1f5f9!important;border-color:#e2e8f0!important;color:#0284c7!important;font-size:6pt!important}
+
+  /* HALLAZGOS — show all expanded */
+  .hallazgo{background:#f8fafc!important;border:1pt solid #e2e8f0!important;margin-bottom:3pt!important;page-break-inside:avoid!important}
+  .hallazgo:hover{border-color:#e2e8f0!important}
+  .hallazgo-hd{cursor:default!important}
+  .hallazgo-body{display:block!important;padding:0 10pt 8pt 13pt!important;border-top-color:#e2e8f0!important}
+  .hallazgo-hd-main{padding:8pt 10pt!important}
+  .hallazgo-id{color:#64748b!important;font-size:6pt!important}
+  .cat-tag{font-size:5.5pt!important;border-color:#e2e8f0!important;color:#64748b!important}
+  .hallazgo-desc{font-size:8.5pt!important;color:#0f172a!important}
+  .hallazgo-obs{font-size:7.5pt!important;color:#475569!important}
+  .hallazgo-impacto{background:#fff5f5!important;border-left-color:#fca5a5!important;color:#7f1d1d!important;print-color-adjust:exact!important;font-size:7pt!important}
+  .hallazgo-impacto strong{color:#dc2626!important;font-size:5.5pt!important}
+  .sem-bar{print-color-adjust:exact!important;-webkit-print-color-adjust:exact!important}
+  .bar-rojo{background:#dc2626!important}
+  .bar-amarillo{background:#d97706!important}
+  .bar-verde{background:#059669!important}
+
+  /* RECOMENDACIONES */
+  .rec{background:#f8fafc!important;border:1pt solid #e2e8f0!important;margin-bottom:3pt!important;page-break-inside:avoid!important}
+  .rec-body{display:block!important;padding:0 10pt 8pt 13pt!important;border-top-color:#e2e8f0!important}
+  .rec-main{padding:8pt 10pt!important}
+  .rec-desc{font-size:8.5pt!important;color:#0f172a!important}
+  .prioridad{font-size:6pt!important;print-color-adjust:exact!important;-webkit-print-color-adjust:exact!important}
+  .p-alta{background:#fff1f2!important;color:#dc2626!important;border-color:#fca5a5!important}
+  .p-media{background:#fffbeb!important;color:#d97706!important;border-color:#fcd34d!important}
+  .p-baja{background:#f0fdf4!important;color:#059669!important;border-color:#86efac!important}
+  .plazo{color:#94a3b8!important;font-size:6pt!important}
+
+  /* NORMAS */
+  .norma-item{background:#f1f5f9!important;border-color:#e2e8f0!important;padding:6pt 8pt!important}
+  .norma-ley{font-size:5.5pt!important;print-color-adjust:exact!important;-webkit-print-color-adjust:exact!important}
+  .norma-ley-21719{background:#f5f3ff!important;border-color:#c4b5fd!important;color:#6d28d9!important}
+  .norma-ley-iso{background:#eff6ff!important;border-color:#93c5fd!important;color:#1d4ed8!important}
+  .norma-ley-gdpr{background:#f0fdf4!important;border-color:#86efac!important;color:#15803d!important}
+  .norma-ley-nist{background:#fffbeb!important;border-color:#fcd34d!important;color:#92400e!important}
+  .norma-art{color:#64748b!important;font-size:6pt!important}
+  .norma-desc{font-size:7pt!important;color:#475569!important}
+
+  /* ART CHIPS */
+  .art-chips{margin:4pt 0 6pt!important}
+  .art-chip{font-size:5.5pt!important;print-color-adjust:exact!important;-webkit-print-color-adjust:exact!important}
+  .art-chip-21719{background:#f5f3ff!important;border-color:#c4b5fd!important;color:#6d28d9!important}
+  .art-chip-iso{background:#eff6ff!important;border-color:#93c5fd!important;color:#1d4ed8!important}
+  .art-chip-gdpr{background:#f0fdf4!important;border-color:#86efac!important;color:#15803d!important}
+  .art-chip-nist{background:#fffbeb!important;border-color:#fcd34d!important;color:#92400e!important}
+
+  /* Page breaks */
+  .kpi-strip{page-break-after:avoid!important}
+  .checks-grid{page-break-after:avoid!important}
+  .section-hd{page-break-after:avoid!important}
+
+  /* Hide scrollbars */
+  ::-webkit-scrollbar{display:none!important}
+}
+</style>
+</head>
+<body>
+
+
+<nav style="height:auto;flex-direction:column;padding:0">
+  <div style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:0 2.5rem;height:54px;border-bottom:1px solid var(--border)">
+    <div>
+      <div class="nav-brand-text">Shell<span>TI</span></div>
+      <div class="nav-brand-sub">Scanner · Auditoría de Datos</div>
+    </div>
+    <div style="display:flex;align-items:center;height:54px;gap:0">
+      <a href="dashboard.html" style="font-family:'JetBrains Mono',monospace;font-size:.6rem;letter-spacing:1.5px;text-transform:uppercase;padding:0 18px;height:100%;display:flex;align-items:center;text-decoration:none;color:var(--cyan);border-bottom:2px solid var(--cyan)">Auditoría</a>
+      <a href="performance.html" style="font-family:'JetBrains Mono',monospace;font-size:.6rem;letter-spacing:1.5px;text-transform:uppercase;padding:0 18px;height:100%;display:flex;align-items:center;text-decoration:none;color:var(--muted);border-bottom:2px solid transparent;transition:color .2s" onclick="syncUrlToPerf(event)">Performance</a>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px">
+      <button class="btn-export" id="btnExport" style="display:none" onclick="exportPDF()">⬇ PDF</button>
+      <div class="nav-tag">Herramienta Interna</div>
+    </div>
+  </div>
+  <!-- UNIFIED SEARCH BAR IN NAV -->
+  <div style="width:100%;padding:8px 2.5rem;display:flex;gap:0;background:rgba(2,6,23,0.98);border-bottom:1px solid var(--border)">
+    <input type="text" id="urlInput" placeholder="empresa.cl · https://www.empresa.cl"
+      style="flex:1;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-right:none;color:var(--silver);font-family:'JetBrains Mono',monospace;font-size:.82rem;padding:9px 16px;outline:none;letter-spacing:.5px;transition:border-color .2s"
+      onfocus="this.style.borderColor='rgba(0,212,255,0.5)'" onblur="this.style.borderColor='rgba(0,212,255,0.13)'" />
+    <button onclick="clearAll()" style="background:transparent;border:1px solid var(--border);border-right:none;color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:.62rem;letter-spacing:1px;text-transform:uppercase;padding:9px 14px;cursor:pointer;white-space:nowrap;transition:color .2s" onmouseover="this.style.color='#FF6B6B'" onmouseout="this.style.color=''">✕</button>
+    <button id="scanBtn" onclick="runScan()" style="background:linear-gradient(135deg,#00D4FF,#00b8e6);color:#020617;border:none;font-family:'JetBrains Mono',monospace;font-size:.68rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;padding:9px 24px;cursor:pointer;white-space:nowrap;transition:opacity .2s">Analizar →</button>
+  </div>
+</nav>
+
+<div class="main">
+
+  <div class="search-section" style="margin-bottom:32px">
+    <div class="status" id="status">
+      <div class="spinner"></div>
+      <span id="statusText">Escaneando sitio...</span>
+    </div>
+    <div class="error-box" id="errorBox"></div>
+  </div>
+
+  <div class="dashboard" id="dashboard">
+
+    <!-- HERO -->
+    <div class="hero-card">
+      <div class="semaforo-wrap">
+        <div class="semaforo-lights">
+          <div class="s-light s-rojo s-off" id="sl-rojo"></div>
+          <div class="s-light s-amarillo s-off" id="sl-amarillo"></div>
+          <div class="s-light s-verde s-off" id="sl-verde"></div>
+        </div>
+        <div class="semaforo-label" id="semaforoLabel">—</div>
+      </div>
+      <div class="hero-info">
+        <div class="hero-overline">Resultado del análisis</div>
+        <div class="hero-title" id="heroTitle"></div>
+        <div class="hero-url" id="heroUrl"></div>
+        <div class="hero-nivel" id="heroNivel"></div>
+      </div>
+      <div class="hero-score">
+        <div class="score-num" id="scoreNum">—</div>
+        <div class="score-den">puntuación / 100 <button class="score-info-btn" onclick="openScoreModal()" title="¿Cómo se calcula este puntaje?">?</button></div>
+        <div class="score-bar-wrap">
+          <div class="score-bar-track"><div class="score-bar-fill" id="scoreBarFill"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RESUMEN -->
+    <div class="resumen-card">
+      <div class="resumen-label">Resumen Ejecutivo</div>
+      <div class="resumen-text" id="resumenTexto">—</div>
+    </div>
+
+    <!-- KPI STRIP -->
+    <div class="kpi-strip" id="kpiStrip"></div>
+
+    <!-- CHECKS -->
+    <div class="checks-grid">
+      <div class="check-card">
+        <div class="check-card-label">Privacidad & Derechos</div>
+        <div id="checkPrivacidad"></div>
+      </div>
+      <div class="check-card">
+        <div class="check-card-label">Cabeceras de Seguridad</div>
+        <div id="checkSeguridad"></div>
+      </div>
+      <div class="check-card">
+        <div class="check-card-label">Trackers detectados</div>
+        <div id="checkTrackers"></div>
+      </div>
+    </div>
+
+    <!-- SANCIÓN ESTIMADA -->
+    <div class="sancion-box" id="sancionBox">
+      <div class="sancion-hd">
+        <span style="font-size:.9rem">⚖️</span>
+        <span class="sancion-title">Exposición a Sanciones · Ley 21.719 Título IX</span>
+      </div>
+      <div class="sancion-grid" id="sancionGrid"></div>
+      <div class="sancion-nota" id="sancionNota"></div>
+    </div>
+
+    <!-- EXPERT PANELS -->
+    <div class="expert-grid">
+
+      <!-- DIMENSIONES LEY 21.719 -->
+      <div class="expert-panel">
+        <div class="expert-panel-title">Dimensiones Ley 21.719</div>
+        <div id="dimLey"></div>
+      </div>
+
+      <!-- CONTROLES ISO 27001 -->
+      <div class="expert-panel">
+        <div class="expert-panel-title">Controles ISO 27001:2022</div>
+        <div class="iso-grid" id="isoGrid"></div>
+      </div>
+
+      <!-- TRANSFERENCIAS INTERNACIONALES -->
+      <div class="expert-panel">
+        <div class="expert-panel-title" style="justify-content:space-between">
+          <span style="display:flex;align-items:center;gap:8px"><span style="content:'';width:14px;height:1px;background:var(--cyan);box-shadow:0 0 6px rgba(0,212,255,.6);display:inline-block"></span>Transferencias Internacionales · Art. 16 bis</span>
+          <button class="score-info-btn" onclick="openTransferModal()" title="¿Qué significa esto?" style="margin-left:8px;flex-shrink:0">?</button>
+        </div>
+        <div class="transfer-list" id="transferList"></div>
+      </div>
+
+      <!-- DERECHOS ARCO+ -->
+      <div class="expert-panel">
+        <div class="expert-panel-title" style="justify-content:space-between">
+          <span style="display:flex;align-items:center;gap:8px"><span style="width:14px;height:1px;background:var(--cyan);box-shadow:0 0 6px rgba(0,212,255,.6);display:inline-block"></span>Derechos ARCO+ · Arts. 14–19</span>
+          <button class="score-info-btn" onclick="openArcoModal()" title="¿Qué significa cada derecho?" style="margin-left:8px;flex-shrink:0">?</button>
+        </div>
+        <table class="arco-table">
+          <tr>
+            <th>Derecho</th><th>Art.</th><th>Evidencia</th><th>Estado</th>
+          </tr>
+          <tbody id="arcoTable"></tbody>
+        </table>
+      </div>
+
+      <!-- FORMULARIOS TÉCNICO -->
+      <div class="expert-panel" style="grid-column:1/-1">
+        <div class="expert-panel-title">Análisis de Formularios · Principio de Minimización Art. 3(c)</div>
+        <div class="form-list" id="formList"></div>
+      </div>
+
+    </div>
+
+    <!-- HALLAZGOS -->
+    <div class="section-hd" style="margin-top:8px">
+      <div class="section-hd-title">Hallazgos</div>
+      <span class="section-count" id="hallazgosCount">0</span>
+      <div class="section-filter">
+        <button class="filter-btn active" onclick="filterItems('hallazgo','all',this)">Todos</button>
+        <button class="filter-btn f-rojo" onclick="filterItems('hallazgo','rojo',this)">🔴 Crítico</button>
+        <button class="filter-btn f-amarillo" onclick="filterItems('hallazgo','amarillo',this)">🟡 Medio</button>
+        <button class="filter-btn f-verde" onclick="filterItems('hallazgo','verde',this)">🟢 Bajo</button>
+      </div>
+    </div>
+    <div id="hallazgos"></div>
+
+    <!-- RECOMENDACIONES -->
+    <div class="section-hd" style="margin-top:28px">
+      <div class="section-hd-title">Recomendaciones</div>
+      <span class="section-count" id="recsCount">0</span>
+      <div class="section-filter">
+        <button class="filter-btn active" onclick="filterItems('rec','all',this)">Todos</button>
+        <button class="filter-btn f-rojo" onclick="filterItems('rec','alta',this)">Alta</button>
+        <button class="filter-btn f-amarillo" onclick="filterItems('rec','media',this)">Media</button>
+        <button class="filter-btn f-verde" onclick="filterItems('rec','baja',this)">Baja</button>
+      </div>
+    </div>
+    <div id="recomendaciones"></div>
+
+    <div class="nota">⚠ Esta evaluación es preliminar y se basa exclusivamente en evidencia técnica observable desde el exterior del sitio. Las referencias normativas son orientativas y no constituyen asesoría legal. Las cifras de sanciones son referenciales según Ley 21.719 Título IX. — ShellTI Technology Consultancy</div>
+
+  </div>
+</div>
+
+<script>
+function clearAll() {
+  document.getElementById('urlInput').value = '';
+  document.getElementById('dashboard').classList.remove('visible');
+  document.getElementById('errorBox').classList.remove('visible');
+  document.getElementById('errorBox').textContent = '';
+  document.getElementById('status').classList.remove('visible');
+  ['sl-rojo','sl-amarillo','sl-verde'].forEach(id => {
+    const el = document.getElementById(id);
+    const color = id.replace('sl-','');
+    el.className = `s-light s-${color} s-off`;
+  });
+  document.getElementById('urlInput').focus();
+  try { sessionStorage.removeItem('shellti_audit'); sessionStorage.removeItem('shellti_pending_url'); } catch(e) {}
+}
+
+async function runScan() {
+  let url = document.getElementById('urlInput').value.trim();
+  if (!url) return;
+  const btn = document.getElementById('scanBtn');
+  const status = document.getElementById('status');
+  const statusText = document.getElementById('statusText');
+  const dashboard = document.getElementById('dashboard');
+  const errorBox = document.getElementById('errorBox');
+  btn.disabled = true;
+  dashboard.classList.remove('visible');
+  errorBox.classList.remove('visible');
+  status.classList.add('visible');
+  statusText.textContent = 'Escaneando sitio...';
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 60000);
+
+  try {
+    const fetchPromise = fetch('http://localhost:3000/scan', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url }),
+      signal: controller.signal
+    });
+    setTimeout(() => { statusText.textContent = 'Analizando con IA...'; }, 8000);
+    setTimeout(() => { statusText.textContent = 'Generando informe experto...'; }, 20000);
+    const res = await fetchPromise;
+    clearTimeout(timeout);
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error || 'Error en el servidor');
+    renderDashboard(json.data, json.crawlerData, url);
+    dashboard.classList.add('visible');
+    try { sessionStorage.setItem('shellti_audit', JSON.stringify({data:json.data, crawlerData:json.crawlerData, url})); } catch(e) {}
+  } catch (err) {
+    clearTimeout(timeout);
+    errorBox.textContent = '⚠ ' + (err.name === 'AbortError' ? 'Timeout: el sitio tardó demasiado en responder.' : err.message);
+    errorBox.classList.add('visible');
+  } finally {
+    status.classList.remove('visible');
+    btn.disabled = false;
+  }
+}
+
+document.getElementById('urlInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') runScan();
+});
+
+function syncUrlToPerf(e) {
+  const url = document.getElementById('urlInput').value.trim();
+  if (url) {
+    try { sessionStorage.setItem('shellti_pending_url', url); } catch(e2) {}
+  }
+}
+
+(function restoreAudit() {
+  try {
+    const saved = sessionStorage.getItem('shellti_audit');
+    if (saved) {
+      const { data, crawlerData, url } = JSON.parse(saved);
+      document.getElementById('urlInput').value = url;
+      renderDashboard(data, crawlerData, url);
+      document.getElementById('dashboard').classList.add('visible');
+      return;
+    }
+    // Auto-run if pending URL from performance tab
+    const pending = sessionStorage.getItem('shellti_pending_url');
+    if (pending) {
+      document.getElementById('urlInput').value = pending;
+      sessionStorage.removeItem('shellti_pending_url');
+      setTimeout(runScan, 100);
+    }
+  } catch(e) {}
+})();
+
+function activateSemaforo(sem) {
+  ['rojo','amarillo','verde'].forEach(c => {
+    const el = document.getElementById('sl-' + c);
+    el.className = `s-light s-${c} s-off`;
+  });
+  const t = document.getElementById('sl-' + sem);
+  if (t) { t.classList.remove('s-off'); t.classList.add('s-on-' + sem); }
+  document.getElementById('semaforoLabel').textContent = sem.toUpperCase();
+}
+
+function scoreColor(n) { return n>=70?'var(--ok)':n>=40?'var(--warn)':'var(--danger)'; }
+function semEmoji(s) { return {rojo:'🔴',amarillo:'🟡',verde:'🟢'}[(s||'').toLowerCase()]||'⚪'; }
+function semBarClass(s) { return {rojo:'bar-rojo',amarillo:'bar-amarillo',verde:'bar-verde'}[(s||'').toLowerCase()]||'bar-amarillo'; }
+function check(val, label) { return `<div class="check-row"><div class="dot ${val?'dot-ok':'dot-fail'}"></div><span>${label}</span></div>`; }
+
+function toggle(el) {
+  const body = el.nextElementSibling;
+  const icon = el.querySelector('.ti');
+  body.classList.toggle('open');
+  if (icon) icon.textContent = body.classList.contains('open') ? '▲' : '▼';
+}
+
+function filterItems(cls, val, btn) {
+  // update button states
+  btn.closest('.section-filter').querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.' + cls).forEach(el => {
+    if (val === 'all') { el.classList.remove('hidden'); return; }
+    const match = cls === 'hallazgo'
+      ? el.dataset.sem === val
+      : el.dataset.prioridad === val;
+    el.classList.toggle('hidden', !match);
+  });
+}
+
+function normaLeyClass(ley) {
+  const l = (ley||'').toLowerCase();
+  if (l.includes('21.719') || l.includes('21719')) return 'norma-ley-21719';
+  if (l.includes('iso')) return 'norma-ley-iso';
+  if (l.includes('gdpr')) return 'norma-ley-gdpr';
+  if (l.includes('nist')) return 'norma-ley-nist';
+  return 'norma-ley-iso';
+}
+
+function artChipClass(ley) {
+  const l = (ley||'').toLowerCase();
+  if (l.includes('21.719') || l.includes('21719')) return 'art-chip-21719';
+  if (l.includes('iso')) return 'art-chip-iso';
+  if (l.includes('gdpr')) return 'art-chip-gdpr';
+  return 'art-chip-nist';
+}
+
+function renderNormativa(normas) {
+  if (!normas || !normas.length) return '';
+  return `<div class="norma-list">${normas.map(n=>`
+    <div class="norma-item">
+      <div class="norma-hd">
+        <span class="norma-ley ${normaLeyClass(n.ley)}">${n.ley||''}</span>
+        <span class="norma-art">${n.articulo||''}</span>
+      </div>
+      <div class="norma-desc">${n.descripcion||''}</div>
+    </div>`).join('')}</div>`;
+}
+
+function renderArtChips(normas) {
+  if (!normas || !normas.length) return '';
+  return `<div class="art-chips">${normas.map(n=>
+    `<span class="art-chip ${artChipClass(n.ley)}">${n.articulo||n.ley}</span>`
+  ).join('')}</div>`;
+}
+
+function renderKPIs(hallazgos, recs, crawler) {
+  const rojos = hallazgos.filter(h => h.semaforo === 'rojo').length;
+  const amarillos = hallazgos.filter(h => h.semaforo === 'amarillo').length;
+  const altas = recs.filter(r => r.prioridad === 'alta').length;
+  const trackers = (crawler.trackers || []).length;
+  const sh = crawler.securityHeaders || {};
+  const headersOk = [sh.hsts, sh.csp, sh.xFrameOptions, sh.referrerPolicy].filter(Boolean).length;
+
+  document.getElementById('kpiStrip').innerHTML = `
+    <div class="kpi-cell">
+      <div class="kpi-val kpi-val-danger">${rojos}</div>
+      <div class="kpi-label">Hallazgos Críticos</div>
+    </div>
+    <div class="kpi-cell">
+      <div class="kpi-val kpi-val-warn">${amarillos}</div>
+      <div class="kpi-label">Hallazgos Medios</div>
+    </div>
+    <div class="kpi-cell">
+      <div class="kpi-val kpi-val-danger">${altas}</div>
+      <div class="kpi-label">Recs. Prioritarias</div>
+    </div>
+    <div class="kpi-cell">
+      <div class="kpi-val kpi-val-warn">${trackers}</div>
+      <div class="kpi-label">Trackers / Trans. Intl.</div>
+    </div>
+    <div class="kpi-cell">
+      <div class="kpi-val ${headersOk>=3?'kpi-val-ok':headersOk>=2?'kpi-val-warn':'kpi-val-danger'}">${headersOk}/4</div>
+      <div class="kpi-label">Headers Seguridad</div>
+    </div>`;
+}
+
+function renderSancion(hallazgos, puntuacion) {
+  const rojos = hallazgos.filter(h => h.semaforo === 'rojo').length;
+  const tipo = puntuacion < 30 ? 'Gravísima' : puntuacion < 55 ? 'Grave' : 'Leve';
+  const maxUtm = puntuacion < 30 ? 5000 : puntuacion < 55 ? 1000 : 100;
+  const clpRef = maxUtm * 65000; // UTM aprox CLP
+  const clpFmt = clpRef >= 1000000 ? `$${(clpRef/1000000).toFixed(0)}M` : `$${clpRef.toLocaleString('es-CL')}`;
+
+  document.getElementById('sancionGrid').innerHTML = `
+    <div class="sancion-item">
+      <div class="sancion-val">${tipo}</div>
+      <div class="sancion-sub">Categoría infracción</div>
+    </div>
+    <div class="sancion-item">
+      <div class="sancion-val">${maxUtm.toLocaleString()} UTM</div>
+      <div class="sancion-sub">Multa máxima estimada</div>
+    </div>
+    <div class="sancion-item">
+      <div class="sancion-val">${clpFmt}</div>
+      <div class="sancion-sub">Equiv. CLP referencial</div>
+    </div>`;
+  document.getElementById('sancionNota').textContent =
+    `Basado en ${rojos} hallazgo(s) crítico(s). Ley 21.719 Título IX, Art. 33 y ss. La Agencia de Protección de Datos puede aplicar sanciones accesorias incluyendo publicación del infractor y suspensión del tratamiento. Cifras referenciales, no constituyen asesoría legal.`;
+}
+
+function renderDimensionesLey(crawler, hallazgos) {
+  const catMap = {};
+  hallazgos.forEach(h => {
+    const s = h.semaforo || 'amarillo';
+    const score = s === 'verde' ? 90 : s === 'amarillo' ? 50 : 15;
+    catMap[h.categoria] = Math.min(catMap[h.categoria] || 100, score);
+  });
+
+  const dims = [
+    { label: 'Licitud (Art. 3a)', key: 'Privacidad' },
+    { label: 'Finalidad (Art. 3b)', key: 'Cookies' },
+    { label: 'Minimización (Art. 3c)', key: 'Formularios' },
+    { label: 'Transparencia (Art. 3f)', key: 'Privacidad' },
+    { label: 'Seguridad (Art. 3e)', key: 'Seguridad' },
+    { label: 'Derechos ARCO+ (Arts.14-19)', key: 'Derechos' },
+    { label: 'Accountability (Art. 3g)', key: 'Accountability' },
+    { label: 'Trans. Intl. (Art.16 bis)', key: 'Transferencias' },
+  ];
+
+  const sh = crawler.securityHeaders || {};
+  const secScore = [sh.hsts, sh.csp, sh.xFrameOptions, sh.referrerPolicy].filter(Boolean).length * 25;
+
+  document.getElementById('dimLey').innerHTML = dims.map(d => {
+    let val = catMap[d.key] !== undefined ? catMap[d.key] :
+              (d.key === 'Seguridad' ? secScore :
+               d.key === 'Privacidad' ? (crawler.privacyPolicy ? 70 : 10) :
+               d.key === 'Derechos' ? (crawler.rightsMechanism ? 60 : 20) : 40);
+    const cls = val >= 70 ? 'dim-ok' : val >= 40 ? 'dim-warn' : 'dim-fail';
+    return `<div class="dim-row ${cls}">
+      <div class="dim-label">${d.label}</div>
+      <div class="dim-bar-track"><div class="dim-bar-fill" style="width:${val}%"></div></div>
+      <div class="dim-score">${val}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderISOControls(crawler) {
+  const sh = crawler.securityHeaders || {};
+  const ctrls = [
+    { code:'8.20', label:'HSTS / Seguridad red', ok: sh.hsts },
+    { code:'8.21', label:'CSP / Inyección código', ok: sh.csp },
+    { code:'8.22', label:'X-Frame / Clickjacking', ok: sh.xFrameOptions },
+    { code:'8.23', label:'Referrer-Policy', ok: sh.referrerPolicy },
+    { code:'8.24', label:'HTTPS / Criptografía', ok: true }, // si llegamos, hay https
+    { code:'5.19', label:'Seguridad proveedores', ok: (crawler.trackers||[]).length === 0 },
+    { code:'5.34', label:'Privacidad y datos pers.', ok: crawler.privacyPolicy },
+    { code:'5.14', label:'Transferencia información', ok: (crawler.trackers||[]).length === 0 },
+  ];
+  document.getElementById('isoGrid').innerHTML = ctrls.map(c => `
+    <div class="iso-ctrl">
+      <span class="iso-ctrl-code">${c.code}</span>
+      <span class="iso-ctrl-label">${c.label}</span>
+      <span class="iso-ctrl-status">${c.ok ? '✅' : '❌'}</span>
+    </div>`).join('');
+}
+
+function renderTransferencias(trackers) {
+  const trackerInfo = {
+    'Google Tag Manager': { pais: 'EE.UU.', art: 'Art. 16 bis Ley 21.719' },
+    'Google Analytics':   { pais: 'EE.UU.', art: 'Art. 16 bis Ley 21.719 / GDPR Art. 46' },
+    'Meta Pixel':         { pais: 'EE.UU.', art: 'Art. 16 bis Ley 21.719' },
+    'Microsoft Clarity':  { pais: 'EE.UU.', art: 'Art. 16 bis Ley 21.719' },
+    'Hotjar':             { pais: 'Malta/EE.UU.', art: 'Art. 16 bis Ley 21.719' },
+    'LinkedIn Insight':   { pais: 'EE.UU.', art: 'Art. 16 bis Ley 21.719' },
+  };
+  const el = document.getElementById('transferList');
+  if (!trackers.length) {
+    el.innerHTML = `<span class="no-transfer">✓ No se detectaron transferencias internacionales de datos</span>`;
+    return;
+  }
+  el.innerHTML = trackers.map(t => {
+    const info = trackerInfo[t] || { pais: 'Internacional', art: 'Art. 16 bis Ley 21.719' };
+    return `<div class="transfer-item">
+      <span class="transfer-icon">🌐</span>
+      <div>
+        <span class="transfer-name">${t} → ${info.pais}</span>
+        <span class="transfer-art">${info.art} · Requiere garantías adecuadas o país con nivel equivalente</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderARCO(crawler) {
+  const derechos = [
+    { nombre:'Acceso', art:'14', evidencia: crawler.privacyPolicy ? 'Política detectada' : 'No detectado', ok: crawler.privacyPolicy },
+    { nombre:'Rectificación', art:'15', evidencia: crawler.rightsMechanism ? 'Mecanismo detectado' : 'No detectado', ok: crawler.rightsMechanism },
+    { nombre:'Supresión', art:'16', evidencia: crawler.rightsMechanism ? 'Mencionado' : 'No detectado', ok: crawler.rightsMechanism },
+    { nombre:'Oposición', art:'17', evidencia: crawler.rejectButton ? 'Botón rechazo OK' : 'No detectado', ok: crawler.rejectButton },
+    { nombre:'Portabilidad', art:'18', evidencia: crawler.rightsMechanism ? 'Mencionado' : 'No detectado', ok: crawler.rightsMechanism },
+    { nombre:'No automatización', art:'19', evidencia: 'No verificable ext.', ok: null },
+  ];
+  document.getElementById('arcoTable').innerHTML = derechos.map(d => `
+    <tr>
+      <td>${d.nombre}</td>
+      <td>Art. ${d.art}</td>
+      <td style="color:var(--muted);font-size:.72rem">${d.evidencia}</td>
+      <td>${d.ok === null ? '⚪' : d.ok ? '✅' : '❌'}</td>
+    </tr>`).join('');
+}
+
+const SENSITIVE_TYPES = ['password','email','tel','date','file','radio','checkbox'];
+const SENSITIVE_NAMES = ['name','nombre','rut','dni','cedula','telefono','phone','address','direccion','fecha','birth','nacimiento','salud','health','sexo','gender','religion','politica'];
+function fieldClass(field) {
+  const n = (field.name||'').toLowerCase();
+  if (SENSITIVE_NAMES.some(s => n.includes(s))) return 'sensitive';
+  if (SENSITIVE_TYPES.includes(field.type)) return 'warn-field';
+  return '';
+}
+
+function renderFormularios(forms) {
+  const el = document.getElementById('formList');
+  if (!forms || !forms.length) {
+    el.innerHTML = `<span class="no-forms">No se detectaron formularios en la página principal.</span>`;
+    return;
+  }
+  el.innerHTML = forms.map((f, i) => `
+    <div class="form-item">
+      <div class="form-action">Form ${i+1}: ${f.action || '(sin action)'}</div>
+      <div class="form-fields">
+        ${(f.fields||[]).map(field => `<span class="form-field ${fieldClass(field)}">${field.name||field.type||'campo'} [${field.type}]</span>`).join('')}
+        ${!f.fields.length ? '<span class="form-field">sin campos detectados</span>' : ''}
+      </div>
+    </div>`).join('');
+}
+
+function renderDashboard(data, crawler, url) {
+  const mt = data.madurezTecnologica || {};
+  const sem = (mt.semaforo || 'amarillo').toLowerCase();
+  const nivel = (mt.nivel || '').toLowerCase();
+  const puntuacion = mt.puntuacion || 0;
+
+  activateSemaforo(sem);
+  document.getElementById('heroTitle').textContent = crawler.title || url;
+  document.getElementById('heroUrl').textContent = url;
+  const nivelEl = document.getElementById('heroNivel');
+  nivelEl.textContent = nivel.toUpperCase();
+  nivelEl.className = `hero-nivel nivel-${nivel||'basico'}`;
+  const scoreEl = document.getElementById('scoreNum');
+  scoreEl.textContent = puntuacion;
+  scoreEl.style.color = scoreColor(puntuacion);
+  const fill = document.getElementById('scoreBarFill');
+  fill.style.width = puntuacion + '%';
+  fill.style.background = scoreColor(puntuacion);
+  document.getElementById('resumenTexto').textContent = data.resumenEjecutivo || '—';
+
+  const hallazgos = data.hallazgos || [];
+  const recs = data.recomendaciones || [];
+
+  // KPIs
+  renderKPIs(hallazgos, recs, crawler);
+
+  // Checks
+  document.getElementById('checkPrivacidad').innerHTML =
+    check(crawler.privacyPolicy,'Política de privacidad') +
+    check(crawler.cookiePolicy,'Política de cookies') +
+    check(crawler.cookieBanner,'Banner de cookies') +
+    check(crawler.rejectButton,'Botón de rechazo') +
+    check(crawler.rightsMechanism,'Mecanismo derechos ARCO+');
+
+  const sh = crawler.securityHeaders || {};
+  document.getElementById('checkSeguridad').innerHTML =
+    check(sh.hsts,'HSTS (Control 8.20 ISO)') +
+    check(sh.csp,'CSP (Control 8.21 ISO)') +
+    check(sh.xFrameOptions,'X-Frame-Options (Control 8.22)') +
+    check(sh.referrerPolicy,'Referrer-Policy (Control 8.23)');
+
+  const trackers = crawler.trackers || [];
+  document.getElementById('checkTrackers').innerHTML = trackers.length
+    ? trackers.map(t=>`<span class="tracker-tag">${t}</span>`).join('')
+    : `<span class="no-trackers">✓ Sin trackers detectados</span>`;
+
+  // Sanciones
+  renderSancion(hallazgos, puntuacion);
+
+  // Expert panels
+  renderDimensionesLey(crawler, hallazgos);
+  renderISOControls(crawler);
+  renderTransferencias(trackers);
+  renderARCO(crawler);
+  renderFormularios(crawler.forms || []);
+
+  // Hallazgos
+  document.getElementById('hallazgosCount').textContent = hallazgos.length;
+  document.getElementById('hallazgos').innerHTML = hallazgos.map(h=>`
+    <div class="hallazgo" data-sem="${h.semaforo||'amarillo'}">
+      <div class="hallazgo-hd" onclick="toggle(this)">
+        <div class="sem-bar ${semBarClass(h.semaforo)}"></div>
+        <div class="hallazgo-hd-main">
+          <div class="hallazgo-meta">
+            <span class="hallazgo-id">H-${String(h.id).padStart(2,'0')}</span>
+            <span class="cat-tag cat-${h.categoria||''}">${h.categoria||''}</span>
+            <span class="sem-emoji">${semEmoji(h.semaforo)}</span>
+          </div>
+          <div class="hallazgo-desc">${h.descripcion}</div>
+          ${renderArtChips(h.normativa)}
+        </div>
+        <div class="toggle-btn"><span class="ti">▼</span></div>
+      </div>
+      <div class="hallazgo-body">
+        <div class="hallazgo-obs">${h.observacion||''}</div>
+        ${h.impacto?`<div class="hallazgo-impacto"><strong>Impacto para el titular de datos</strong>${h.impacto}</div>`:''}
+        ${renderNormativa(h.normativa)}
+      </div>
+    </div>`).join('');
+
+  // Recomendaciones
+  const pCls = {alta:'p-alta',media:'p-media',baja:'p-baja'};
+  document.getElementById('recsCount').textContent = recs.length;
+  document.getElementById('recomendaciones').innerHTML = recs.map(r=>`
+    <div class="rec" data-prioridad="${r.prioridad||'media'}">
+      <div class="rec-hd" onclick="toggle(this)">
+        <div class="sem-bar ${semBarClass(r.semaforo)}"></div>
+        <div class="rec-main">
+          <div class="rec-meta">
+            <span class="prioridad ${pCls[r.prioridad]||''}">${r.prioridad}</span>
+            <span class="sem-emoji">${semEmoji(r.semaforo)}</span>
+            ${r.plazo?`<span class="plazo">⏱ ${r.plazo}</span>`:''}
+          </div>
+          <div class="rec-desc">${r.descripcion}</div>
+          ${renderArtChips(r.fundamentoLegal)}
+        </div>
+        <div class="toggle-btn"><span class="ti">▼</span></div>
+      </div>
+      <div class="rec-body">${renderNormativa(r.fundamentoLegal)}</div>
+    </div>`).join('');
+
+  // Store all data for PDF export
+  const now = new Date();
+  window._pdfData = { data, crawler, url, puntuacion, nivel, semaforo: sem, now };
+  document.getElementById('btnExport').style.display = 'inline-flex';
+}
+
+function exportPDF() {
+  const D = window._pdfData;
+  if (!D) return;
+
+  const { data, crawler, url, puntuacion, nivel, semaforo, now } = D;
+  const hallazgos = data.hallazgos || [];
+  const recs = data.recomendaciones || [];
+  const sh = crawler.securityHeaders || {};
+  const trackers = crawler.trackers || [];
+  const headersOk = [sh.hsts, sh.csp, sh.xFrameOptions, sh.referrerPolicy].filter(Boolean).length;
+  const rojos = hallazgos.filter(h => h.semaforo === 'rojo').length;
+  const amarillos = hallazgos.filter(h => h.semaforo === 'amarillo').length;
+  const altas = recs.filter(r => r.prioridad === 'alta').length;
+  const scoreColor = puntuacion >= 70 ? '#059669' : puntuacion >= 40 ? '#d97706' : '#dc2626';
+  const nivelLabel = nivel.charAt(0).toUpperCase() + nivel.slice(1);
+  const semaforoEmoji = { rojo: '🔴', amarillo: '🟡', verde: '🟢' }[semaforo] || '🟡';
+  const tipoSancion = puntuacion < 30 ? 'Gravísima' : puntuacion < 55 ? 'Grave' : 'Leve';
+  const maxUtm = puntuacion < 30 ? 5000 : puntuacion < 55 ? 1000 : 100;
+  const clpRef = maxUtm * 65000;
+  const clpFmt = clpRef >= 1000000 ? `$${(clpRef/1000000).toFixed(0)}M CLP` : `$${clpRef.toLocaleString('es-CL')} CLP`;
+  const dateStr = now.toLocaleDateString('es-CL', { day: '2-digit', month: 'long', year: 'numeric' });
+  const timeStr = now.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
+
+  // SVG Wolf Logo (simplified vector based on ShellTI style)
+  const wolfSVG = `<svg width="44" height="44" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="22" cy="22" r="22" fill="#0f2444"/>
+    <path d="M22 8 C18 8 14 11 13 15 L11 13 L12 18 C10 20 9 23 10 26 C11 30 14 33 18 34 L18 36 L20 35 C21 35.5 21.5 36 22 36 C22.5 36 23 35.5 24 35 L26 36 L26 34 C30 33 33 30 34 26 C35 23 34 20 32 18 L33 13 L31 15 C30 11 26 8 22 8Z" fill="white" opacity="0.95"/>
+    <path d="M19 20 C19 19 19.5 18.5 20 18.5 C20.5 18.5 21 19 21 20 C21 21 20.5 21.5 20 21.5 C19.5 21.5 19 21 19 20Z" fill="#0f2444"/>
+    <path d="M23 20 C23 19 23.5 18.5 24 18.5 C24.5 18.5 25 19 25 20 C25 21 24.5 21.5 24 21.5 C23.5 21.5 23 21 23 20Z" fill="#0f2444"/>
+    <path d="M20 24 L22 25.5 L24 24" stroke="#0f2444" stroke-width="0.8" stroke-linecap="round" fill="none"/>
+    <path d="M14 15 L16 19 L14 21" stroke="white" stroke-width="1" stroke-linecap="round" fill="none" opacity="0.6"/>
+    <path d="M30 15 L28 19 L30 21" stroke="white" stroke-width="1" stroke-linecap="round" fill="none" opacity="0.6"/>
+  </svg>`;
+
+  function semColor(s) {
+    return { rojo: '#dc2626', amarillo: '#d97706', verde: '#059669' }[s] || '#d97706';
+  }
+  function semBg(s) {
+    return { rojo: '#fff1f2', amarillo: '#fffbeb', verde: '#f0fdf4' }[s] || '#fffbeb';
+  }
+  function semBorder(s) {
+    return { rojo: '#fca5a5', amarillo: '#fcd34d', verde: '#86efac' }[s] || '#fcd34d';
+  }
+  function priColor(p) {
+    return { alta: '#dc2626', media: '#d97706', baja: '#059669' }[p] || '#d97706';
+  }
+  function priBg(p) {
+    return { alta: '#fff1f2', media: '#fffbeb', baja: '#f0fdf4' }[p] || '#fffbeb';
+  }
+
+  function renderNormasHtml(normas) {
+    if (!normas || !normas.length) return '';
+    const colors = { '21.719': ['#f5f3ff','#6d28d9'], '21719': ['#f5f3ff','#6d28d9'], 'iso': ['#eff6ff','#1d4ed8'], 'gdpr': ['#f0fdf4','#15803d'], 'nist': ['#fffbeb','#92400e'] };
+    function nc(ley) {
+      const l = (ley||'').toLowerCase();
+      if (l.includes('21.719') || l.includes('21719')) return colors['21.719'];
+      if (l.includes('iso')) return colors['iso'];
+      if (l.includes('gdpr')) return colors['gdpr'];
+      return colors['nist'];
+    }
+    return normas.map(n => {
+      const [bg, col] = nc(n.ley);
+      return `<div style="background:#f8fafc;border:0.5pt solid #e2e8f0;padding:5pt 7pt;margin-top:4pt">
+        <div style="display:flex;align-items:center;gap:5pt;margin-bottom:2pt">
+          <span style="background:${bg};border:0.5pt solid ${col}33;color:${col};font-size:5.5pt;font-family:monospace;padding:1pt 5pt;letter-spacing:0.5pt">${n.ley||''}</span>
+          <span style="font-size:6pt;color:#64748b;font-family:monospace">${n.articulo||''}</span>
+        </div>
+        <div style="font-size:7pt;color:#475569;line-height:1.5">${n.descripcion||''}</div>
+      </div>`;
+    }).join('');
+  }
+
+  function renderHallazgosHtml() {
+    if (!hallazgos.length) return '<p style="color:#94a3b8;font-size:8pt;font-style:italic">Sin hallazgos registrados.</p>';
+    return hallazgos.map((h, i) => {
+      const sc = semColor(h.semaforo), sbg = semBg(h.semaforo), sbr = semBorder(h.semaforo);
+      const catColors = {Privacidad:['#f5f3ff','#6d28d9'],Seguridad:['#eff6ff','#1d4ed8'],Cookies:['#fffbeb','#92400e'],Trackers:['#fffbeb','#92400e'],Derechos:['#f0fdf4','#15803d'],Formularios:['#eff6ff','#0369a1'],Transferencias:['#fff1f2','#dc2626'],DatosSensibles:['#fff1f2','#dc2626'],Accountability:['#f5f3ff','#6d28d9']};
+      const [cbg, ccol] = catColors[h.categoria] || ['#f1f5f9','#64748b'];
+      return `<div style="border:0.5pt solid ${sbr};background:${sbg};margin-bottom:6pt;page-break-inside:avoid">
+        <div style="display:flex;align-items:stretch">
+          <div style="width:3pt;background:${sc};flex-shrink:0"></div>
+          <div style="flex:1;padding:7pt 9pt">
+            <div style="display:flex;align-items:center;gap:5pt;margin-bottom:4pt;flex-wrap:wrap">
+              <span style="font-family:monospace;font-size:5.5pt;color:#94a3b8;letter-spacing:1pt">H-${String(h.id||i+1).padStart(2,'0')}</span>
+              <span style="background:${cbg};color:${ccol};font-size:5.5pt;font-family:monospace;padding:1pt 5pt;letter-spacing:0.5pt">${h.categoria||''}</span>
+              <span style="background:${sbg};color:${sc};font-size:5.5pt;font-family:monospace;padding:1pt 5pt;border:0.5pt solid ${sbr}">${(h.semaforo||'').toUpperCase()}</span>
+            </div>
+            <div style="font-size:8.5pt;font-weight:700;color:#0f172a;margin-bottom:4pt;line-height:1.4">${h.descripcion||''}</div>
+            ${h.observacion ? `<div style="font-size:7.5pt;color:#475569;line-height:1.6;margin-bottom:4pt">${h.observacion}</div>` : ''}
+            ${h.impacto ? `<div style="background:#fff1f2;border-left:2pt solid #fca5a5;padding:5pt 7pt;font-size:7pt;color:#7f1d1d;line-height:1.5;margin-bottom:4pt"><strong style="display:block;font-size:5.5pt;font-family:monospace;color:#dc2626;letter-spacing:1pt;margin-bottom:2pt">IMPACTO PARA EL TITULAR</strong>${h.impacto}</div>` : ''}
+            ${renderNormasHtml(h.normativa)}
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  function renderRecsHtml() {
+    if (!recs.length) return '<p style="color:#94a3b8;font-size:8pt;font-style:italic">Sin recomendaciones registradas.</p>';
+    return recs.map((r, i) => {
+      const pc = priColor(r.prioridad), pbg = priBg(r.prioridad);
+      const sc = semColor(r.semaforo), sbg = semBg(r.semaforo), sbr = semBorder(r.semaforo);
+      return `<div style="border:0.5pt solid #e2e8f0;background:#f8fafc;margin-bottom:5pt;page-break-inside:avoid">
+        <div style="display:flex;align-items:stretch">
+          <div style="width:3pt;background:${sc};flex-shrink:0"></div>
+          <div style="flex:1;padding:7pt 9pt">
+            <div style="display:flex;align-items:center;gap:5pt;margin-bottom:4pt;flex-wrap:wrap">
+              <span style="background:${pbg};color:${pc};font-size:5.5pt;font-family:monospace;padding:1pt 6pt;border:0.5pt solid ${pc}44;letter-spacing:1pt;text-transform:uppercase">${r.prioridad||'media'}</span>
+              ${r.plazo ? `<span style="font-size:6pt;color:#94a3b8;font-family:monospace">⏱ ${r.plazo}</span>` : ''}
+            </div>
+            <div style="font-size:8.5pt;font-weight:600;color:#0f172a;margin-bottom:4pt;line-height:1.4">${r.descripcion||''}</div>
+            ${renderNormasHtml(r.fundamentoLegal)}
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  function checkRow(ok, label) {
+    return `<tr><td style="padding:4pt 6pt;font-size:8pt;color:#334155;border-bottom:0.5pt solid #f1f5f9">${label}</td>
+      <td style="padding:4pt 6pt;text-align:center;border-bottom:0.5pt solid #f1f5f9">${ok ? '<span style="color:#059669;font-size:10pt">✓</span>' : '<span style="color:#dc2626;font-size:10pt">✗</span>'}</td></tr>`;
+  }
+
+  function dimRow(label, val) {
+    const col = val >= 70 ? '#059669' : val >= 40 ? '#d97706' : '#dc2626';
+    const barW = Math.round(val * 0.7); // max ~70pt width
+    return `<tr>
+      <td style="padding:4pt 6pt;font-size:7.5pt;color:#334155;border-bottom:0.5pt solid #f1f5f9;white-space:nowrap">${label}</td>
+      <td style="padding:4pt 6pt;border-bottom:0.5pt solid #f1f5f9">
+        <div style="background:#e2e8f0;height:5pt;border-radius:2pt;width:70pt;position:relative">
+          <div style="background:${col};height:5pt;border-radius:2pt;width:${barW}pt;print-color-adjust:exact;-webkit-print-color-adjust:exact"></div>
+        </div>
+      </td>
+      <td style="padding:4pt 6pt;font-family:monospace;font-size:6.5pt;color:${col};text-align:right;border-bottom:0.5pt solid #f1f5f9">${val}</td>
+    </tr>`;
+  }
+
+  // Build dimension scores same as renderDimensionesLey
+  const catMap = {};
+  hallazgos.forEach(h => {
+    const s = h.semaforo || 'amarillo';
+    const score = s === 'verde' ? 90 : s === 'amarillo' ? 50 : 15;
+    catMap[h.categoria] = Math.min(catMap[h.categoria] || 100, score);
+  });
+  const secScore = [sh.hsts, sh.csp, sh.xFrameOptions, sh.referrerPolicy].filter(Boolean).length * 25;
+  function dimVal(key) {
+    return catMap[key] !== undefined ? catMap[key] :
+      (key === 'Seguridad' ? secScore :
+       key === 'Privacidad' ? (crawler.privacyPolicy ? 70 : 10) :
+       key === 'Derechos' ? (crawler.rightsMechanism ? 60 : 20) : 40);
+  }
+
+  const html = `<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>ShellTI · Auditoría · ${crawler.title || url}</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:#ffffff;color:#0f172a;font-family:'Inter',Arial,sans-serif;font-size:9.5pt;line-height:1.6}
+  @page{size:A4;margin:15mm 14mm 20mm 14mm}
+  @page:first{margin-top:10mm}
+  .page-break{page-break-before:always}
+  .avoid-break{page-break-inside:avoid}
+
+  /* HEADER */
+  .pdf-header{display:flex;align-items:center;justify-content:space-between;padding-bottom:10pt;border-bottom:2pt solid #0284c7;margin-bottom:20pt}
+  .logo-area{display:flex;align-items:center;gap:10pt}
+  .logo-text{font-size:20pt;font-weight:800;color:#0f172a;letter-spacing:-0.5pt;line-height:1}
+  .logo-text span{color:#0284c7}
+  .logo-sub{font-size:6pt;font-family:'JetBrains Mono',monospace;letter-spacing:2pt;text-transform:uppercase;color:#64748b;margin-top:3pt}
+  .logo-contact{font-size:6pt;font-family:'JetBrains Mono',monospace;color:#94a3b8;margin-top:2pt}
+  .header-right{text-align:right}
+  .report-badge{display:inline-block;background:#0f2444;color:#ffffff;font-size:6pt;font-family:'JetBrains Mono',monospace;letter-spacing:2pt;text-transform:uppercase;padding:3pt 8pt;margin-bottom:5pt}
+  .report-target{font-size:11pt;font-weight:700;color:#0f172a;margin-bottom:2pt}
+  .report-url{font-size:7pt;font-family:'JetBrains Mono',monospace;color:#0284c7;margin-bottom:2pt}
+  .report-date{font-size:6.5pt;font-family:'JetBrains Mono',monospace;color:#94a3b8}
+
+  /* FOOTER */
+  .pdf-footer{position:fixed;bottom:0;left:0;right:0;border-top:0.5pt solid #e2e8f0;padding-top:5pt;display:flex;justify-content:space-between;background:#fff}
+  .pdf-footer span{font-size:5.5pt;font-family:'JetBrains Mono',monospace;color:#94a3b8}
+
+  /* SECTION TITLES */
+  .section-title{font-size:7pt;font-family:'JetBrains Mono',monospace;font-weight:500;letter-spacing:2.5pt;text-transform:uppercase;color:#0284c7;margin-bottom:10pt;padding-bottom:4pt;border-bottom:0.5pt solid #e2e8f0;display:flex;align-items:center;gap:7pt}
+  .section-title::before{content:'';display:inline-block;width:14pt;height:1pt;background:#0284c7}
+
+  /* SCORE HERO */
+  .hero{display:flex;gap:0;margin-bottom:16pt;border:0.5pt solid #e2e8f0}
+  .hero-score-box{background:#0f2444;color:#ffffff;padding:16pt 20pt;text-align:center;flex-shrink:0;display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:90pt}
+  .hero-score-num{font-size:36pt;font-weight:800;line-height:1;color:${scoreColor};-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .hero-score-den{font-size:6pt;font-family:'JetBrains Mono',monospace;color:#94a3b8;letter-spacing:1pt;margin-top:3pt}
+  .hero-score-bar{width:60pt;height:4pt;background:rgba(255,255,255,0.15);border-radius:2pt;margin-top:7pt;overflow:hidden}
+  .hero-score-fill{height:100%;border-radius:2pt;background:${scoreColor};width:${puntuacion}%;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .hero-nivel-badge{font-size:6pt;font-family:'JetBrains Mono',monospace;letter-spacing:1.5pt;text-transform:uppercase;margin-top:7pt;padding:2pt 8pt;background:${scoreColor}22;color:${scoreColor};border:0.5pt solid ${scoreColor}66;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .hero-info{flex:1;padding:14pt 16pt;background:#f8fafc}
+  .hero-overline{font-size:6pt;font-family:'JetBrains Mono',monospace;letter-spacing:2pt;text-transform:uppercase;color:#059669;margin-bottom:5pt}
+  .hero-title{font-size:14pt;font-weight:800;color:#0f172a;line-height:1.2;margin-bottom:4pt}
+  .hero-url{font-size:7.5pt;font-family:'JetBrains Mono',monospace;color:#0284c7;margin-bottom:10pt}
+  .hero-semaforo{display:inline-flex;align-items:center;gap:5pt;font-size:7.5pt;font-weight:600}
+  .hero-resumen{font-size:8pt;color:#475569;line-height:1.7;font-style:italic;margin-top:8pt;padding-top:8pt;border-top:0.5pt solid #e2e8f0}
+
+  /* KPI GRID */
+  .kpi-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:0;border:0.5pt solid #e2e8f0;margin-bottom:16pt}
+  .kpi-cell{padding:10pt 8pt;text-align:center;border-right:0.5pt solid #e2e8f0}
+  .kpi-cell:last-child{border-right:none}
+  .kpi-val{font-size:18pt;font-weight:800;line-height:1;margin-bottom:3pt;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .kpi-lbl{font-size:5pt;font-family:'JetBrains Mono',monospace;letter-spacing:1pt;text-transform:uppercase;color:#64748b}
+
+  /* TWO-COL */
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:10pt;margin-bottom:16pt}
+  .panel{border:0.5pt solid #e2e8f0;padding:12pt}
+  .panel-title{font-size:6pt;font-family:'JetBrains Mono',monospace;letter-spacing:2pt;text-transform:uppercase;color:#64748b;margin-bottom:9pt;padding-bottom:5pt;border-bottom:0.5pt solid #f1f5f9}
+
+  /* SANCION */
+  .sancion-box{border:0.5pt solid #fca5a5;background:#fff8f8;padding:12pt 14pt;margin-bottom:16pt;display:grid;grid-template-columns:repeat(3,1fr);gap:12pt;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .sancion-item{text-align:center}
+  .sancion-label{font-size:5.5pt;font-family:'JetBrains Mono',monospace;letter-spacing:1pt;text-transform:uppercase;color:#94a3b8;margin-bottom:4pt}
+  .sancion-val{font-size:13pt;font-weight:800;color:#dc2626}
+  .sancion-full{border:0.5pt solid #fca5a5;background:#fff8f8;padding:12pt 14pt;margin-bottom:16pt}
+  .sancion-nota{font-size:6.5pt;font-family:'JetBrains Mono',monospace;color:#b91c1c;margin-top:8pt;padding-top:8pt;border-top:0.5pt solid #fecaca;grid-column:1/-1}
+
+  table.clean{width:100%;border-collapse:collapse}
+  table.clean th{font-size:5.5pt;font-family:'JetBrains Mono',monospace;letter-spacing:1.5pt;text-transform:uppercase;color:#64748b;font-weight:400;padding:5pt 6pt;border-bottom:1pt solid #e2e8f0;text-align:left}
+  table.clean td{padding:5pt 6pt;font-size:8pt;border-bottom:0.5pt solid #f1f5f9;color:#334155}
+
+  .disclaimer{background:#f8fafc;border:0.5pt solid #e2e8f0;padding:10pt 12pt;margin-top:20pt;font-size:6.5pt;font-family:'JetBrains Mono',monospace;color:#94a3b8;line-height:1.8}
+  .tag{display:inline-block;font-size:5.5pt;font-family:'JetBrains Mono',monospace;letter-spacing:0.5pt;padding:1.5pt 5pt;border:0.5pt solid;margin-right:2pt;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .print-btn{position:fixed;top:12pt;right:12pt;background:#0284c7;color:#fff;border:none;padding:7pt 14pt;font-family:'Inter',sans-serif;font-size:8pt;font-weight:600;cursor:pointer;letter-spacing:0.5pt}
+  .print-btn:hover{background:#0369a1}
+  @media print{.print-btn{display:none!important}}
+</style>
+</head>
+<body>
+
+<button class="print-btn" onclick="window.print()">⬇ Guardar como PDF</button>
+
+<!-- HEADER -->
+<div class="pdf-header">
+  <div class="logo-area">
+    ${wolfSVG}
+    <div>
+      <div class="logo-text">Shell<span>TI</span></div>
+      <div class="logo-sub">Technology Consultancy</div>
+      <div class="logo-contact">shellti.com · contacto@shellti.com</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="report-badge">Informe de Auditoría de Datos</div>
+    <div class="report-target">${crawler.title || url}</div>
+    <div class="report-url">${url}</div>
+    <div class="report-date">Generado el ${dateStr} · ${timeStr} hrs</div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<div class="pdf-footer">
+  <span>ShellTI Technology Consultancy · shellti.com · contacto@shellti.com</span>
+  <span>Informe preliminar · No constituye asesoría legal · Uso interno · Ley 21.719 Chile</span>
+</div>
+
+<!-- SCORE HERO -->
+<div style="margin-bottom:6pt">
+  <div class="section-title">Resultado del Análisis</div>
+</div>
+<div class="hero avoid-break">
+  <div class="hero-score-box">
+    <div style="font-size:6pt;font-family:'JetBrains Mono',monospace;color:#94a3b8;letter-spacing:2pt;text-transform:uppercase;margin-bottom:6pt">Puntuación</div>
+    <div class="hero-score-num">${puntuacion}</div>
+    <div class="hero-score-den">/ 100</div>
+    <div class="hero-score-bar"><div class="hero-score-fill"></div></div>
+    <div class="hero-nivel-badge">${nivelLabel}</div>
+    <div style="font-size:12pt;margin-top:8pt">${semaforoEmoji}</div>
+  </div>
+  <div class="hero-info">
+    <div class="hero-overline">Resultado del análisis · Ley 21.719</div>
+    <div class="hero-title">${crawler.title || url}</div>
+    <div class="hero-url">${url}</div>
+    <div style="display:flex;gap:8pt;flex-wrap:wrap">
+      <div style="font-size:7.5pt;color:#475569"><strong style="color:#0f172a">${rojos}</strong> hallazgos críticos</div>
+      <div style="font-size:7.5pt;color:#475569"><strong style="color:#0f172a">${amarillos}</strong> hallazgos medios</div>
+      <div style="font-size:7.5pt;color:#475569"><strong style="color:#0f172a">${altas}</strong> recomendaciones prioritarias</div>
+      <div style="font-size:7.5pt;color:#475569"><strong style="color:#0f172a">${trackers.length}</strong> trackers detectados</div>
+      <div style="font-size:7.5pt;color:#475569"><strong style="color:#0f172a">${headersOk}/4</strong> headers de seguridad</div>
+    </div>
+    ${data.resumenEjecutivo ? `<div class="hero-resumen">${data.resumenEjecutivo}</div>` : ''}
+  </div>
+</div>
+
+<!-- KPI STRIP -->
+<div class="kpi-grid avoid-break">
+  <div class="kpi-cell"><div class="kpi-val" style="color:#dc2626">${rojos}</div><div class="kpi-lbl">Hallazgos Críticos</div></div>
+  <div class="kpi-cell"><div class="kpi-val" style="color:#d97706">${amarillos}</div><div class="kpi-lbl">Hallazgos Medios</div></div>
+  <div class="kpi-cell"><div class="kpi-val" style="color:#dc2626">${altas}</div><div class="kpi-lbl">Recs. Prioritarias</div></div>
+  <div class="kpi-cell"><div class="kpi-val" style="color:#d97706">${trackers.length}</div><div class="kpi-lbl">Trackers / Trans. Intl.</div></div>
+  <div class="kpi-cell"><div class="kpi-val" style="color:${headersOk>=3?'#059669':headersOk>=2?'#d97706':'#dc2626'}">${headersOk}/4</div><div class="kpi-lbl">Headers Seguridad</div></div>
+</div>
+
+<!-- SANCIONES -->
+<div style="margin-bottom:6pt"><div class="section-title">Exposición a Sanciones · Ley 21.719 Título IX</div></div>
+<div class="sancion-full avoid-break">
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12pt">
+    <div class="sancion-item"><div class="sancion-label">Categoría infracción</div><div class="sancion-val">${tipoSancion}</div></div>
+    <div class="sancion-item"><div class="sancion-label">Multa máxima estimada</div><div class="sancion-val">${maxUtm.toLocaleString()} UTM</div></div>
+    <div class="sancion-item"><div class="sancion-label">Equiv. CLP referencial</div><div class="sancion-val">${clpFmt}</div></div>
+  </div>
+  <div class="sancion-nota">Basado en ${rojos} hallazgo(s) crítico(s). Art. 33 y ss. Ley 21.719. La Agencia de Protección de Datos puede aplicar sanciones accesorias incluyendo publicación del infractor. Cifras referenciales.</div>
+</div>
+
+<!-- CHECKS + TRACKERS -->
+<div style="margin-bottom:6pt"><div class="section-title">Verificaciones Técnicas</div></div>
+<div class="two-col avoid-break">
+  <div class="panel">
+    <div class="panel-title">Privacidad & Derechos</div>
+    <table class="clean">
+      ${checkRow(crawler.privacyPolicy,'Política de privacidad')}
+      ${checkRow(crawler.cookiePolicy,'Política de cookies')}
+      ${checkRow(crawler.cookieBanner,'Banner de cookies')}
+      ${checkRow(crawler.rejectButton,'Botón de rechazo')}
+      ${checkRow(crawler.rightsMechanism,'Mecanismo derechos ARCO+')}
+    </table>
+  </div>
+  <div class="panel">
+    <div class="panel-title">Cabeceras de Seguridad · ISO 27001</div>
+    <table class="clean">
+      ${checkRow(sh.hsts,'HSTS (Control 8.20)')}
+      ${checkRow(sh.csp,'CSP (Control 8.21)')}
+      ${checkRow(sh.xFrameOptions,'X-Frame-Options (Control 8.22)')}
+      ${checkRow(sh.referrerPolicy,'Referrer-Policy (Control 8.23)')}
+    </table>
+    <div style="margin-top:10pt">
+      <div class="panel-title">Trackers Detectados</div>
+      ${trackers.length ? trackers.map(t=>`<span class="tag" style="background:#fffbeb;border-color:#fcd34d;color:#92400e">${t}</span>`).join('') : '<span style="color:#059669;font-size:8pt;font-weight:500">✓ Sin trackers detectados</span>'}
+    </div>
+  </div>
+</div>
+
+<!-- DIMENSIONES + DERECHOS ARCO -->
+<div style="margin-bottom:6pt"><div class="section-title">Análisis por Dimensiones · Ley 21.719</div></div>
+<div class="two-col avoid-break">
+  <div class="panel">
+    <div class="panel-title">Dimensiones Ley 21.719</div>
+    <table class="clean">
+      <tr><th>Dimensión</th><th>Progreso</th><th style="text-align:right">Score</th></tr>
+      ${dimRow('Licitud (Art. 3a)', dimVal('Privacidad'))}
+      ${dimRow('Finalidad (Art. 3b)', dimVal('Cookies'))}
+      ${dimRow('Minimización (Art. 3c)', dimVal('Formularios'))}
+      ${dimRow('Seguridad (Art. 3e)', secScore)}
+      ${dimRow('Transparencia (Art. 3f)', dimVal('Privacidad'))}
+      ${dimRow('Derechos ARCO+ (Arts.14-19)', dimVal('Derechos'))}
+      ${dimRow('Accountability (Art. 3g)', dimVal('Accountability'))}
+      ${dimRow('Trans. Intl. (Art. 16 bis)', dimVal('Transferencias'))}
+    </table>
+  </div>
+  <div class="panel">
+    <div class="panel-title">Derechos ARCO+ · Arts. 14–19</div>
+    <table class="clean">
+      <tr><th>Derecho</th><th>Art.</th><th>Evidencia</th><th>Estado</th></tr>
+      ${[
+        {n:'Acceso', a:'14', ok: crawler.privacyPolicy, ev: crawler.privacyPolicy?'Política detectada':'No detectado'},
+        {n:'Rectificación', a:'15', ok: crawler.rightsMechanism, ev: crawler.rightsMechanism?'Mecanismo detectado':'No detectado'},
+        {n:'Supresión', a:'16', ok: crawler.rightsMechanism, ev: crawler.rightsMechanism?'Mencionado':'No detectado'},
+        {n:'Oposición', a:'17', ok: crawler.rejectButton, ev: crawler.rejectButton?'Botón rechazo OK':'No detectado'},
+        {n:'Portabilidad', a:'18', ok: crawler.rightsMechanism, ev: crawler.rightsMechanism?'Mencionado':'No detectado'},
+        {n:'No automatización', a:'19', ok: null, ev:'No verificable ext.'},
+      ].map(d=>`<tr>
+        <td style="font-weight:500;color:#0284c7;font-size:7.5pt">${d.n}</td>
+        <td style="font-family:monospace;font-size:6.5pt;color:#64748b">Art. ${d.a}</td>
+        <td style="font-size:6.5pt;color:#94a3b8">${d.ev}</td>
+        <td style="text-align:center;font-size:9pt">${d.ok===null?'⚪':d.ok?'✓':'✗'}</td>
+      </tr>`).join('')}
+    </table>
+  </div>
+</div>
+
+<!-- HALLAZGOS -->
+<div class="page-break"></div>
+<div style="margin-bottom:6pt"><div class="section-title">Hallazgos · ${hallazgos.length} detectados</div></div>
+${renderHallazgosHtml()}
+
+<!-- RECOMENDACIONES -->
+<div class="page-break"></div>
+<div style="margin-bottom:6pt"><div class="section-title">Recomendaciones · ${recs.length} acciones sugeridas</div></div>
+${renderRecsHtml()}
+
+<!-- DISCLAIMER -->
+<div class="disclaimer avoid-break">
+  <div style="font-weight:600;color:#64748b;margin-bottom:5pt;letter-spacing:1pt">⚠ AVISO LEGAL Y DESCARGO DE RESPONSABILIDAD</div>
+  Este informe ha sido generado de forma automatizada por ShellTI Technology Consultancy mediante análisis técnico externo del sitio web indicado. La evaluación se basa exclusivamente en evidencia observable desde el exterior del sitio web, sin acceso a sistemas internos, bases de datos, código fuente privado ni documentación interna.<br><br>
+  Las referencias normativas incluidas (Ley 21.719 de Chile, ISO/IEC 27001:2022, GDPR, NIST CSF) son orientativas y tienen carácter informativo. Los resultados, hallazgos, puntajes y recomendaciones contenidos en este documento NO constituyen asesoría legal, jurídica ni de cumplimiento normativo formal. Las estimaciones de sanciones son referenciales y se basan en los umbrales máximos establecidos en el Título IX de la Ley 21.719, sin considerar circunstancias atenuantes, agravantes ni el historial particular del responsable.<br><br>
+  Para una auditoría formal de cumplimiento normativo, ShellTI recomienda complementar este análisis con una revisión interna exhaustiva y la asesoría de un profesional legal especializado en protección de datos personales.<br><br>
+  Documento generado el ${dateStr} a las ${timeStr} hrs · Confidencial · Uso interno ShellTI · shellti.com · contacto@shellti.com
+</div>
+
+</body></html>`;
+
+  const w = window.open('', '_blank');
+  w.document.write(html);
+  w.document.close();
+}
+</script>
+<!-- MODAL: CÓMO SE CALCULA EL PUNTAJE -->
+<div class="modal-overlay" id="scoreModal" onclick="handleModalOverlayClick(event)">
+  <div class="modal-box" id="scoreModalBox">
+    <div class="modal-hd">
+      <div class="modal-hd-title">¿Cómo se calcula la puntuación?</div>
+      <button class="modal-close" onclick="closeScoreModal()">✕</button>
+    </div>
+    <div class="modal-body">
+
+      <!-- INTRO -->
+      <div class="m-section">
+        <div class="m-section-title">Visión general</div>
+        <div class="m-section-desc">
+          El puntaje de madurez va de <strong style="color:var(--silver)">0 a 100</strong> y refleja qué tan bien cumple un sitio web con los requisitos de privacidad y seguridad de la <strong style="color:var(--purple)">Ley 21.719</strong> (Ley Marco de Datos Personales de Chile), la norma <strong style="color:var(--cyan)">ISO/IEC 27001:2022</strong> y referentes como <strong style="color:var(--ok)">GDPR</strong> y <strong style="color:var(--warn)">NIST CSF</strong>. La puntuación es generada por la IA de análisis a partir de evidencia técnica observable desde el exterior del sitio, no requiere acceso interno.
+        </div>
+        <div class="m-formula">
+          <strong>Puntaje Final</strong> = <span>Base dimensional (ponderada)</span><br>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;− <span>Penalizaciones por hallazgos críticos</span><br>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+ <span>Bonificaciones por buenas prácticas</span><br>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;→ <strong>Resultado ajustado al rango [0–100]</strong>
+        </div>
+      </div>
+
+      <div class="m-divider"></div>
+
+      <!-- DIMENSIONES -->
+      <div class="m-section">
+        <div class="m-section-title">Las 8 dimensiones evaluadas</div>
+        <div class="m-section-desc">Cada dimensión tiene un peso distinto en el puntaje final. La IA asigna un valor entre 0 y 100 a cada una en función de los hallazgos detectados para esa categoría.</div>
+        <table class="m-dim-table">
+          <thead>
+            <tr>
+              <th>Dimensión</th>
+              <th>Norma referente</th>
+              <th>¿Qué se evalúa?</th>
+              <th style="text-align:right">Peso</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Licitud del tratamiento</td>
+              <td>Art. 3(a) Ley 21.719</td>
+              <td>Existencia de política de privacidad, base legal visible, consentimiento documentado</td>
+              <td style="text-align:right;color:var(--cyan);font-family:'JetBrains Mono',monospace;font-size:.68rem">20%</td>
+            </tr>
+            <tr>
+              <td>Finalidad y uso</td>
+              <td>Art. 3(b) Ley 21.719</td>
+              <td>Política de cookies, declaración de finalidades del tratamiento</td>
+              <td style="text-align:right;color:var(--cyan);font-family:'JetBrains Mono',monospace;font-size:.68rem">12%</td>
+            </tr>
+            <tr>
+              <td>Minimización de datos</td>
+              <td>Art. 3(c) Ley 21.719</td>
+              <td>Formularios: campos solicitados vs. necesidad real, datos sensibles expuestos</td>
+              <td style="text-align:right;color:var(--cyan);font-family:'JetBrains Mono',monospace;font-size:.68rem">10%</td>
+            </tr>
+            <tr>
+              <td>Seguridad técnica</td>
+              <td>Art. 3(e) Ley 21.719 · ISO 8.20–8.24</td>
+              <td>Headers HTTP de seguridad: HSTS, CSP, X-Frame-Options, Referrer-Policy, HTTPS</td>
+              <td style="text-align:right;color:var(--cyan);font-family:'JetBrains Mono',monospace;font-size:.68rem">20%</td>
+            </tr>
+            <tr>
+              <td>Transparencia</td>
+              <td>Art. 3(f) Ley 21.719</td>
+              <td>Claridad y accesibilidad de la política de privacidad, banner de cookies con opción de rechazo</td>
+              <td style="text-align:right;color:var(--cyan);font-family:'JetBrains Mono',monospace;font-size:.68rem">12%</td>
+            </tr>
+            <tr>
+              <td>Derechos ARCO+</td>
+              <td>Arts. 14–19 Ley 21.719</td>
+              <td>Mecanismo para ejercer derechos de Acceso, Rectificación, Cancelación, Oposición, Portabilidad</td>
+              <td style="text-align:right;color:var(--cyan);font-family:'JetBrains Mono',monospace;font-size:.68rem">14%</td>
+            </tr>
+            <tr>
+              <td>Accountability</td>
+              <td>Art. 3(g) Ley 21.719</td>
+              <td>Responsable identificable, DPO mencionado, evidencia de gobernanza de datos</td>
+              <td style="text-align:right;color:var(--cyan);font-family:'JetBrains Mono',monospace;font-size:.68rem">8%</td>
+            </tr>
+            <tr>
+              <td>Transferencias internacionales</td>
+              <td>Art. 16 bis Ley 21.719</td>
+              <td>Trackers de terceros que impliquen transferencia de datos a servidores fuera de Chile</td>
+              <td style="text-align:right;color:var(--cyan);font-family:'JetBrains Mono',monospace;font-size:.68rem">4%</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="m-divider"></div>
+
+      <!-- PENALIZACIONES -->
+      <div class="m-section">
+        <div class="m-section-title">Penalizaciones automáticas</div>
+        <div class="m-section-desc">Cada hallazgo detectado descuenta puntos del puntaje base según su nivel de criticidad. Los hallazgos críticos tienen mayor impacto porque representan incumplimientos directos y sancionables.</div>
+        <div class="m-pen-list">
+          <div class="m-pen-item">
+            <span class="m-pen-badge">🔴 Crítico</span>
+            <div class="m-pen-text"><strong style="color:var(--silver)">−8 a −12 puntos por hallazgo.</strong> Incumplimiento directo de obligación legal (ej: ausencia total de política de privacidad, sin HTTPS, datos sensibles expuestos sin protección). Corresponde a infracciones graves o gravísimas según Art. 33 Ley 21.719.</div>
+          </div>
+          <div class="m-pen-item">
+            <span class="m-pen-badge warn">🟡 Medio</span>
+            <div class="m-pen-text"><strong style="color:var(--silver)">−3 a −5 puntos por hallazgo.</strong> Incumplimiento parcial o deficiencia técnica (ej: banner de cookies sin opción de rechazo, header de seguridad ausente, política de privacidad incompleta). Corresponde a infracciones leves.</div>
+          </div>
+          <div class="m-pen-item">
+            <span class="m-pen-badge" style="background:rgba(52,211,153,0.08);border-color:rgba(52,211,153,0.3);color:var(--ok)">🟢 Bajo</span>
+            <div class="m-pen-text"><strong style="color:var(--silver)">−0.5 a −1 punto por hallazgo.</strong> Buenas prácticas no implementadas, mejoras recomendadas pero sin impacto legal inmediato (ej: falta de Referrer-Policy, formulario sin autocomplete="off").</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="m-divider"></div>
+
+      <!-- BONIFICACIONES -->
+      <div class="m-section">
+        <div class="m-section-title">Bonificaciones por buenas prácticas</div>
+        <div class="m-section-desc">Ciertos controles implementados correctamente suman puntos adicionales, reconociendo que el sitio va más allá del mínimo legal.</div>
+        <div class="m-bonus-list">
+          <div class="m-bonus-item">
+            <span class="m-bonus-badge">+5 pts</span>
+            <div class="m-bonus-text">Los 4 headers HTTP de seguridad implementados correctamente: HSTS, CSP, X-Frame-Options y Referrer-Policy.</div>
+          </div>
+          <div class="m-bonus-item">
+            <span class="m-bonus-badge">+4 pts</span>
+            <div class="m-bonus-text">Mecanismo ARCO+ funcional detectado: enlace o formulario para ejercer derechos de titular de datos.</div>
+          </div>
+          <div class="m-bonus-item">
+            <span class="m-bonus-badge">+3 pts</span>
+            <div class="m-bonus-text">Sin trackers de terceros detectados. Implica que no existen transferencias internacionales no declaradas.</div>
+          </div>
+          <div class="m-bonus-item">
+            <span class="m-bonus-badge">+3 pts</span>
+            <div class="m-bonus-text">Banner de cookies con botón de rechazo activo y visible, en cumplimiento del Art. 3(b) de la Ley 21.719.</div>
+          </div>
+          <div class="m-bonus-item">
+            <span class="m-bonus-badge">+2 pts</span>
+            <div class="m-bonus-text">Política de privacidad completa y accesible desde todas las páginas del sitio.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="m-divider"></div>
+
+      <!-- RANGOS -->
+      <div class="m-section">
+        <div class="m-section-title">Tabla de rangos y niveles</div>
+        <div class="m-section-desc">Una vez calculado el puntaje final, se asigna un nivel de madurez y un semáforo de riesgo:</div>
+        <div class="m-rangos">
+          <div class="m-rango rango-incipiente">
+            <div class="m-rango-sem">🔴</div>
+            <div class="m-rango-num">0–39</div>
+            <div class="m-rango-label">Incipiente</div>
+            <div class="m-rango-desc">Incumplimientos graves y múltiples. Alta exposición a sanciones. Acción inmediata requerida.</div>
+          </div>
+          <div class="m-rango rango-basico">
+            <div class="m-rango-sem">🟡</div>
+            <div class="m-rango-num">40–54</div>
+            <div class="m-rango-label">Básico</div>
+            <div class="m-rango-desc">Cumplimiento mínimo parcial. Faltan controles importantes. Riesgo de sanción moderado-alto.</div>
+          </div>
+          <div class="m-rango rango-intermedio">
+            <div class="m-rango-sem">🟡</div>
+            <div class="m-rango-num">55–69</div>
+            <div class="m-rango-label">Intermedio</div>
+            <div class="m-rango-desc">Base sólida pero con brechas relevantes. Riesgo moderado. Plan de mejora acotado.</div>
+          </div>
+          <div class="m-rango rango-avanzado">
+            <div class="m-rango-sem">🟢</div>
+            <div class="m-rango-num">70–100</div>
+            <div class="m-rango-label">Avanzado</div>
+            <div class="m-rango-desc">Cumplimiento alto. Buenas prácticas implementadas. Riesgo bajo de sanción.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="m-divider"></div>
+
+      <!-- EJEMPLO CÁLCULO -->
+      <div class="m-section">
+        <div class="m-section-title">Ejemplo de cálculo paso a paso</div>
+        <div class="m-section-desc">Para un sitio con política de privacidad, sin HSTS ni CSP, con Google Analytics, sin banner de cookies y con 3 hallazgos críticos y 2 medios:</div>
+        <div class="m-example">
+          <div class="m-example-title">Ejemplo ilustrativo · Sitio ficticio</div>
+          <div class="m-example-row">
+            <span>Puntaje base dimensional (promedio ponderado)</span>
+            <span>72 pts</span>
+          </div>
+          <div class="m-example-row">
+            <span>3 hallazgos críticos × −10 pts c/u</span>
+            <span style="color:var(--danger)">−30 pts</span>
+          </div>
+          <div class="m-example-row">
+            <span>2 hallazgos medios × −4 pts c/u</span>
+            <span style="color:var(--warn)">−8 pts</span>
+          </div>
+          <div class="m-example-row">
+            <span>Bonificación: política de privacidad detectada</span>
+            <span style="color:var(--ok)">+2 pts</span>
+          </div>
+          <div class="m-example-row">
+            <span>Bonificación: mecanismo ARCO+ detectado</span>
+            <span style="color:var(--ok)">+4 pts</span>
+          </div>
+          <div class="m-example-row">
+            <span><strong>Puntaje final → Nivel BÁSICO 🟡</strong></span>
+            <span><strong>40 pts</strong></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="m-divider"></div>
+
+      <!-- NOTA LEGAL -->
+      <div style="padding:14px 16px;border:1px solid rgba(0,212,255,0.08);background:rgba(0,212,255,0.02);font-family:'JetBrains Mono',monospace;font-size:.62rem;color:var(--muted);line-height:1.8">
+        ⚠ Esta puntuación es generada automáticamente por análisis externo. No constituye asesoría legal ni auditoría formal. Las valoraciones son referenciales según la evidencia técnica observable desde el exterior del sitio web. Para una evaluación completa se recomienda una auditoría interna. — ShellTI Technology Consultancy
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+function openScoreModal() {
+  document.getElementById('scoreModal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeScoreModal() {
+  document.getElementById('scoreModal').classList.remove('open');
+  document.body.style.overflow = '';
+}
+function handleModalOverlayClick(e) {
+  if (e.target === document.getElementById('scoreModal')) closeScoreModal();
+}
+function openTransferModal() {
+  document.getElementById('transferModal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeTransferModal() {
+  document.getElementById('transferModal').classList.remove('open');
+  document.body.style.overflow = '';
+}
+function handleTransferOverlayClick(e) {
+  if (e.target === document.getElementById('transferModal')) closeTransferModal();
+}
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') { closeScoreModal(); closeTransferModal(); closeArcoModal(); }
+});
+</script>
+
+<!-- MODAL: TRANSFERENCIAS INTERNACIONALES -->
+<div class="modal-overlay" id="transferModal" onclick="handleTransferOverlayClick(event)">
+  <div class="modal-box" id="transferModalBox">
+    <div class="modal-hd">
+      <div class="modal-hd-title">Transferencias Internacionales de Datos</div>
+      <button class="modal-close" onclick="closeTransferModal()">✕</button>
+    </div>
+    <div class="modal-body">
+
+      <!-- QUÉ ES -->
+      <div class="m-section">
+        <div class="m-section-title">¿Qué es una transferencia internacional de datos?</div>
+        <div class="m-section-desc">
+          Cuando visitas un sitio web, tu navegador no solo se conecta al servidor de esa empresa. Si el sitio tiene herramientas como Google Analytics, Meta Pixel u otras, tu información también viaja automáticamente a los servidores de esas empresas, que en su mayoría están en <strong style="color:var(--silver)">Estados Unidos u otros países fuera de Chile</strong>.<br><br>
+          Esa información puede incluir tu dirección IP, qué páginas visitaste, cuánto tiempo estuviste, tu dispositivo, tu ubicación aproximada, y en algunos casos datos más específicos si interactuaste con formularios o iniciaste sesión.
+        </div>
+        <div class="m-formula" style="font-size:.74rem;line-height:1.9">
+          <span>Tú visitas el sitio</span> → <strong>Tu navegador carga scripts de terceros</strong><br>
+          → <span>Esos scripts envían datos tuyos a servidores en EE.UU. / Europa</span><br>
+          → <strong>Sin que necesariamente lo sepas o lo hayas autorizado explícitamente</strong>
+        </div>
+      </div>
+
+      <div class="m-divider"></div>
+
+      <!-- QUÉ DICE LA LEY -->
+      <div class="m-section">
+        <div class="m-section-title">¿Qué dice la Ley 21.719 al respecto?</div>
+        <div class="m-section-desc">
+          La <strong style="color:var(--purple)">Ley 21.719 de Protección de Datos Personales de Chile</strong> establece en su <strong style="color:var(--purple)">Artículo 16 bis</strong> que transferir datos personales a otro país solo es legal si se cumple <em>al menos una</em> de estas condiciones:
+        </div>
+        <div class="m-pen-list">
+          <div class="m-pen-item" style="border-color:rgba(167,139,250,0.2);background:rgba(167,139,250,0.04)">
+            <span class="m-pen-badge" style="background:rgba(167,139,250,0.12);border-color:rgba(167,139,250,0.3);color:var(--purple);white-space:nowrap">✅ Opción A</span>
+            <div class="m-pen-text"><strong style="color:var(--silver)">País con nivel de protección equivalente.</strong> El país de destino tiene una ley de datos que la Agencia de Protección de Datos de Chile haya reconocido como equivalente. Actualmente la lista es reducida — EE.UU. <strong style="color:var(--danger)">no está en ella</strong>.</div>
+          </div>
+          <div class="m-pen-item" style="border-color:rgba(167,139,250,0.2);background:rgba(167,139,250,0.04)">
+            <span class="m-pen-badge" style="background:rgba(167,139,250,0.12);border-color:rgba(167,139,250,0.3);color:var(--purple);white-space:nowrap">✅ Opción B</span>
+            <div class="m-pen-text"><strong style="color:var(--silver)">Garantías adecuadas documentadas.</strong> Se firmaron cláusulas contractuales tipo, binding corporate rules, o mecanismos similares que garantizan el mismo nivel de protección que da la ley chilena.</div>
+          </div>
+          <div class="m-pen-item" style="border-color:rgba(167,139,250,0.2);background:rgba(167,139,250,0.04)">
+            <span class="m-pen-badge" style="background:rgba(167,139,250,0.12);border-color:rgba(167,139,250,0.3);color:var(--purple);white-space:nowrap">✅ Opción C</span>
+            <div class="m-pen-text"><strong style="color:var(--silver)">Consentimiento explícito e informado del titular.</strong> La persona fue informada específicamente de que sus datos irán a ese país y que puede no tener los mismos derechos allá, y aun así aceptó.</div>
+          </div>
+          <div class="m-pen-item" style="border-color:rgba(167,139,250,0.2);background:rgba(167,139,250,0.04)">
+            <span class="m-pen-badge" style="background:rgba(167,139,250,0.12);border-color:rgba(167,139,250,0.3);color:var(--purple);white-space:nowrap">✅ Opción D</span>
+            <div class="m-pen-text"><strong style="color:var(--silver)">Excepción legal aplicable.</strong> La transferencia es necesaria para ejecutar un contrato con el titular, para proteger su vida, o por razones de interés público reconocidas en la ley.</div>
+          </div>
+        </div>
+        <div style="margin-top:12px;padding:10px 14px;background:rgba(255,107,107,0.05);border:1px solid rgba(255,107,107,0.18);font-size:.78rem;color:var(--muted);line-height:1.7">
+          🔴 <strong style="color:var(--danger)">El problema en la práctica:</strong> La mayoría de los sitios que usan Google Analytics, Meta Pixel o similares nunca firmaron acuerdos formales de garantías adecuadas con los usuarios chilenos, ni obtuvieron consentimiento explícito para la transferencia internacional. Eso convierte cada visita en una potencial transferencia ilegal bajo la Ley 21.719.
+        </div>
+      </div>
+
+      <div class="m-divider"></div>
+
+      <!-- TRACKERS DETECTADOS -->
+      <div class="m-section">
+        <div class="m-section-title">Trackers que implican transferencia internacional</div>
+        <div class="m-section-desc">Estos son los servicios más comunes que generan transferencias internacionales de datos y lo que implica cada uno:</div>
+        <table class="m-dim-table">
+          <thead>
+            <tr>
+              <th>Servicio</th>
+              <th>País destino</th>
+              <th>¿Qué datos envía?</th>
+              <th>Riesgo legal</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Google Tag Manager</td>
+              <td>EE.UU.</td>
+              <td>Activa y carga otros scripts. Por sí solo envía IP, agente de usuario, URL visitada</td>
+              <td style="color:var(--warn);font-family:'JetBrains Mono',monospace;font-size:.62rem">MEDIO</td>
+            </tr>
+            <tr>
+              <td>Google Analytics</td>
+              <td>EE.UU.</td>
+              <td>IP, páginas visitadas, tiempo en sitio, dispositivo, ubicación aproximada, comportamiento de navegación</td>
+              <td style="color:var(--danger);font-family:'JetBrains Mono',monospace;font-size:.62rem">ALTO</td>
+            </tr>
+            <tr>
+              <td>Meta Pixel</td>
+              <td>EE.UU.</td>
+              <td>IP, páginas visitadas, acciones realizadas, datos de formularios, puede cruzarse con perfil de Facebook</td>
+              <td style="color:var(--danger);font-family:'JetBrains Mono',monospace;font-size:.62rem">ALTO</td>
+            </tr>
+            <tr>
+              <td>Microsoft Clarity</td>
+              <td>EE.UU.</td>
+              <td>Grabación de sesión completa (movimientos del mouse, clics, scroll), heatmaps, IP</td>
+              <td style="color:var(--danger);font-family:'JetBrains Mono',monospace;font-size:.62rem">ALTO</td>
+            </tr>
+            <tr>
+              <td>Hotjar</td>
+              <td>Malta / EE.UU.</td>
+              <td>Grabación de sesión, encuestas, heatmaps, datos de formularios incluyendo campos sensibles</td>
+              <td style="color:var(--danger);font-family:'JetBrains Mono',monospace;font-size:.62rem">ALTO</td>
+            </tr>
+            <tr>
+              <td>LinkedIn Insight Tag</td>
+              <td>EE.UU.</td>
+              <td>IP, comportamiento en el sitio, datos cruzados con perfil de LinkedIn si el usuario tiene sesión activa</td>
+              <td style="color:var(--warn);font-family:'JetBrains Mono',monospace;font-size:.62rem">MEDIO</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="m-divider"></div>
+
+      <!-- QUÉ DEBE HACER LA EMPRESA -->
+      <div class="m-section">
+        <div class="m-section-title">¿Qué debe hacer la empresa para cumplir?</div>
+        <div class="m-bonus-list">
+          <div class="m-bonus-item">
+            <span class="m-bonus-badge">Paso 1</span>
+            <div class="m-bonus-text"><strong style="color:var(--silver)">Identificar todos los servicios de terceros</strong> que se cargan en el sitio y mapear a qué países envían datos. Esto incluye scripts de analytics, publicidad, soporte en vivo, fuentes tipográficas externas y CDNs.</div>
+          </div>
+          <div class="m-bonus-item">
+            <span class="m-bonus-badge">Paso 2</span>
+            <div class="m-bonus-text"><strong style="color:var(--silver)">Firmar los acuerdos de procesamiento de datos (DPA)</strong> que ofrecen Google, Meta y otros proveedores. Estos acuerdos establecen las garantías contractuales exigidas por el Art. 16 bis. Muchos están disponibles en línea y se aceptan digitalmente.</div>
+          </div>
+          <div class="m-bonus-item">
+            <span class="m-bonus-badge">Paso 3</span>
+            <div class="m-bonus-text"><strong style="color:var(--silver)">Informar en la política de privacidad</strong> de forma clara y específica: qué servicios de terceros se usan, a qué países se transfieren datos, y cuál es la base legal de esa transferencia (garantías contractuales, consentimiento, etc.).</div>
+          </div>
+          <div class="m-bonus-item">
+            <span class="m-bonus-badge">Paso 4</span>
+            <div class="m-bonus-text"><strong style="color:var(--silver)">Implementar un Consent Management Platform (CMP)</strong>: un sistema de gestión de consentimiento que bloquee los scripts de terceros hasta que el usuario acepte activamente las cookies y la transferencia de datos. No basta solo con mostrar el banner.</div>
+          </div>
+          <div class="m-bonus-item">
+            <span class="m-bonus-badge">Paso 5</span>
+            <div class="m-bonus-text"><strong style="color:var(--silver)">Evaluar si todos los trackers son necesarios.</strong> Muchas veces el sitio carga herramientas que ya no se usan o que se duplican. Eliminar trackers innecesarios es la forma más simple y efectiva de reducir el riesgo.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="m-divider"></div>
+
+      <!-- SANCIONES -->
+      <div class="m-section">
+        <div class="m-section-title">¿Qué sanciones puede aplicar la ley?</div>
+        <div class="m-section-desc">Las transferencias internacionales sin las garantías adecuadas son consideradas infracciones <strong style="color:var(--danger)">graves</strong> bajo el Título IX de la Ley 21.719:</div>
+        <div class="m-rangos" style="grid-template-columns:repeat(3,1fr)">
+          <div class="m-rango rango-avanzado">
+            <div class="m-rango-sem">⚖️</div>
+            <div class="m-rango-num" style="font-size:.9rem">Hasta 100 UTM</div>
+            <div class="m-rango-label">Infracción Leve</div>
+            <div class="m-rango-desc">~$6,5 millones CLP. Omisiones formales sin daño directo.</div>
+          </div>
+          <div class="m-rango rango-basico">
+            <div class="m-rango-sem">⚖️</div>
+            <div class="m-rango-num" style="font-size:.9rem">Hasta 1.000 UTM</div>
+            <div class="m-rango-label">Infracción Grave</div>
+            <div class="m-rango-desc">~$65 millones CLP. Transferencias sin garantías adecuadas.</div>
+          </div>
+          <div class="m-rango rango-incipiente">
+            <div class="m-rango-sem">⚖️</div>
+            <div class="m-rango-num" style="font-size:.9rem">Hasta 5.000 UTM</div>
+            <div class="m-rango-label">Infracción Gravísima</div>
+            <div class="m-rango-desc">~$325 millones CLP. Transferencia de datos sensibles o con perjuicio a titulares.</div>
+          </div>
+        </div>
+        <div style="margin-top:12px;padding:10px 14px;background:rgba(245,158,11,0.05);border:1px solid rgba(245,158,11,0.18);font-size:.78rem;color:var(--muted);line-height:1.7">
+          🟡 <strong style="color:var(--warn)">Además de la multa económica</strong>, la Agencia de Protección de Datos puede ordenar la <strong style="color:var(--silver)">suspensión inmediata del tratamiento</strong> (lo que puede implicar apagar herramientas críticas del sitio), publicar el nombre de la empresa en un registro público de infractores, y aplicar sanciones accesorias reincidentes con el doble de multa.
+        </div>
+      </div>
+
+      <div class="m-divider"></div>
+
+      <!-- NOTA -->
+      <div style="padding:14px 16px;border:1px solid rgba(0,212,255,0.08);background:rgba(0,212,255,0.02);font-family:'JetBrains Mono',monospace;font-size:.62rem;color:var(--muted);line-height:1.8">
+        ⚠ La detección de trackers se realiza analizando los scripts cargados en la página principal del sitio. Pueden existir transferencias adicionales en subpáginas o procesos internos no detectables externamente. Las cifras de UTM son referenciales (1 UTM ≈ $65.000 CLP). No constituye asesoría legal. — ShellTI Technology Consultancy
+      </div>
+
+    </div>
+  </div>
+</div>
+<!-- MODAL: DERECHOS ARCO+ -->
+<div class="modal-overlay" id="arcoModal" onclick="handleArcoOverlayClick(event)">
+  <div class="modal-box" style="max-width:860px">
+    <div class="modal-hd">
+      <div class="modal-hd-title">Derechos ARCO+ · ¿Qué debe garantizar el sitio?</div>
+      <button class="modal-close" onclick="closeArcoModal()">✕</button>
+    </div>
+    <div class="modal-body">
+
+      <!-- INTRO -->
+      <div class="m-section">
+        <div class="m-section-title">¿Qué son los Derechos ARCO+?</div>
+        <div class="m-section-desc">
+          Los <strong style="color:var(--silver)">Derechos ARCO+</strong> son los derechos que tiene cualquier persona sobre sus propios datos personales cuando una empresa los trata. La sigla viene de <strong style="color:var(--cyan)">Acceso, Rectificación, Cancelación y Oposición</strong>, a los que la Ley 21.719 sumó <strong style="color:var(--cyan)">Portabilidad y No automatización</strong>. Toda empresa que trate datos de personas en Chile está obligada a garantizarlos y a tener un mecanismo visible y funcional para ejercerlos. Si el sitio no lo tiene, está incumpliendo la ley.
+        </div>
+      </div>
+
+      <div class="m-divider"></div>
+
+      <!-- ART 14 — ACCESO -->
+      <div class="m-section">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:.6rem;letter-spacing:2px;text-transform:uppercase;background:rgba(0,212,255,0.1);border:1px solid rgba(0,212,255,0.3);color:var(--cyan);padding:3px 10px">Art. 14</span>
+          <span style="font-size:1rem;font-weight:700;color:var(--silver)">Derecho de Acceso</span>
+        </div>
+        <div class="m-section-desc">
+          Cualquier persona puede pedirle a una empresa <strong style="color:var(--silver)">qué datos tiene sobre ella</strong>: cuáles son, de dónde los obtuvo, para qué los usa, a quién se los ha entregado y por cuánto tiempo los guardará. La empresa tiene <strong style="color:var(--silver)">30 días hábiles</strong> para responder desde que recibe la solicitud, sin costo para el titular.
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div class="m-pen-item">
+            <span class="m-pen-badge">❌ Si no cumple</span>
+            <div class="m-pen-text">La empresa no tiene forma visible de recibir solicitudes de acceso (no hay formulario, correo ni canal habilitado). El titular no puede saber qué datos tiene la empresa sobre él. Infracción grave — hasta <strong style="color:var(--danger)">1.000 UTM (~$65M CLP)</strong>.</div>
+          </div>
+          <div class="m-bonus-item">
+            <span class="m-bonus-badge">✅ Cómo cumplir</span>
+            <div class="m-bonus-text">Publicar en el sitio un correo, formulario o canal específico para recibir solicitudes de derechos. Idealmente en la política de privacidad o en un enlace "Mis derechos" en el footer.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="m-divider"></div>
+
+      <!-- ART 15 — RECTIFICACIÓN -->
+      <div class="m-section">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:.6rem;letter-spacing:2px;text-transform:uppercase;background:rgba(0,212,255,0.1);border:1px solid rgba(0,212,255,0.3);color:var(--cyan);padding:3px 10px">Art. 15</span>
+          <span style="font-size:1rem;font-weight:700;color:var(--silver)">Derecho de Rectificación</span>
+        </div>
+        <div class="m-section-desc">
+          Si los datos que una empresa tiene sobre una persona son <strong style="color:var(--silver)">incorrectos, inexactos, incompletos o desactualizados</strong>, esa persona puede exigir que se corrijan. La empresa debe hacerlo en <strong style="color:var(--silver)">30 días hábiles</strong> y, si esos datos los había compartido con terceros, debe notificarles la corrección también.
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div class="m-pen-item">
+            <span class="m-pen-badge">❌ Si no cumple</span>
+            <div class="m-pen-text">El titular tiene un dato erróneo en los registros de la empresa (un RUT mal escrito, una dirección antigua) y no hay forma de pedirle que lo corrija. Puede causar perjuicios concretos. Infracción grave — hasta <strong style="color:var(--danger)">1.000 UTM</strong>.</div>
+          </div>
+          <div class="m-bonus-item">
+            <span class="m-bonus-badge">✅ Cómo cumplir</span>
+            <div class="m-bonus-text">Incluir explícitamente en la política de privacidad que el titular puede solicitar la corrección de sus datos, con instrucciones claras de cómo hacerlo y plazo de respuesta.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="m-divider"></div>
+
+      <!-- ART 16 — SUPRESIÓN -->
+      <div class="m-section">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:.6rem;letter-spacing:2px;text-transform:uppercase;background:rgba(0,212,255,0.1);border:1px solid rgba(0,212,255,0.3);color:var(--cyan);padding:3px 10px">Art. 16</span>
+          <span style="font-size:1rem;font-weight:700;color:var(--silver)">Derecho de Supresión ("Al olvido")</span>
+        </div>
+        <div class="m-section-desc">
+          Es el conocido <strong style="color:var(--silver)">"derecho al olvido"</strong>. Permite a cualquier persona pedirle a una empresa que <strong style="color:var(--silver)">elimine todos sus datos personales</strong>. La empresa debe hacerlo, a menos que tenga una obligación legal de conservarlos (ej: registros tributarios, contabilidad). Si los datos se habían compartido con terceros, también debe pedirles que los eliminen.
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div class="m-pen-item">
+            <span class="m-pen-badge">❌ Si no cumple</span>
+            <div class="m-pen-text">La empresa sigue guardando datos de personas que ya no son clientes o que retiraron su consentimiento. Esto es especialmente grave para datos sensibles (salud, religión, política). Puede llegar a infracción <strong style="color:var(--danger)">gravísima — hasta 5.000 UTM (~$325M CLP)</strong>.</div>
+          </div>
+          <div class="m-bonus-item">
+            <span class="m-bonus-badge">✅ Cómo cumplir</span>
+            <div class="m-bonus-text">Definir y publicar una política de retención de datos con plazos claros, y habilitar un canal para recibir solicitudes de eliminación. Documentar cada solicitud atendida.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="m-divider"></div>
+
+      <!-- ART 17 — OPOSICIÓN -->
+      <div class="m-section">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:.6rem;letter-spacing:2px;text-transform:uppercase;background:rgba(0,212,255,0.1);border:1px solid rgba(0,212,255,0.3);color:var(--cyan);padding:3px 10px">Art. 17</span>
+          <span style="font-size:1rem;font-weight:700;color:var(--silver)">Derecho de Oposición</span>
+        </div>
+        <div class="m-section-desc">
+          Permite que una persona le diga a una empresa <strong style="color:var(--silver)">"no quiero que uses mis datos para este fin específico"</strong>, aunque el tratamiento sea legítimo. El caso más típico es oponerse a recibir publicidad o a que se usen sus datos para perfilamiento. La empresa debe dejar de hacerlo, salvo que pueda demostrar un interés legítimo que prevalezca.
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div class="m-pen-item">
+            <span class="m-pen-badge">❌ Si no cumple</span>
+            <div class="m-pen-text">No hay botón de rechazo de cookies, no hay opt-out de publicidad, o no existe ningún canal para oponerse al uso de datos con fines de marketing. Infracción grave cuando el sitio usa datos con fines distintos a la razón original por que se entregaron.</div>
+          </div>
+          <div class="m-bonus-item">
+            <span class="m-bonus-badge">✅ Cómo cumplir</span>
+            <div class="m-bonus-text">Banner de cookies con botón de rechazo real y funcional. Enlace de "cancelar suscripción" en correos. Canal para solicitar que no se usen datos con fines de marketing directo.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="m-divider"></div>
+
+      <!-- ART 18 — PORTABILIDAD -->
+      <div class="m-section">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:.6rem;letter-spacing:2px;text-transform:uppercase;background:rgba(0,212,255,0.1);border:1px solid rgba(0,212,255,0.3);color:var(--cyan);padding:3px 10px">Art. 18</span>
+          <span style="font-size:1rem;font-weight:700;color:var(--silver)">Derecho de Portabilidad</span>
+        </div>
+        <div class="m-section-desc">
+          Permite que una persona le pida a una empresa una <strong style="color:var(--silver)">copia de todos sus datos en un formato digital reutilizable</strong> (como un archivo CSV o JSON), para poder llevarlos a otra empresa o plataforma. Es especialmente relevante en servicios de salud, banca, telecomunicaciones y plataformas digitales. La empresa tiene <strong style="color:var(--silver)">30 días hábiles</strong> para entregarlos.
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div class="m-pen-item">
+            <span class="m-pen-badge">❌ Si no cumple</span>
+            <div class="m-pen-text">El usuario no puede exportar sus datos ni llevarlos a otro servicio. La empresa "retiene" al cliente por fricción técnica en vez de por valor real. Infracción grave en sectores donde la portabilidad es clave (salud, finanzas, telecomunicaciones).</div>
+          </div>
+          <div class="m-bonus-item">
+            <span class="m-bonus-badge">✅ Cómo cumplir</span>
+            <div class="m-bonus-text">Implementar una opción de "exportar mis datos" en la cuenta del usuario, o definir un proceso de solicitud con respuesta en formato estándar (JSON, CSV, XML). Documentarlo en la política de privacidad.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="m-divider"></div>
+
+      <!-- ART 19 — NO AUTOMATIZACIÓN -->
+      <div class="m-section">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:.6rem;letter-spacing:2px;text-transform:uppercase;background:rgba(0,212,255,0.1);border:1px solid rgba(0,212,255,0.3);color:var(--cyan);padding:3px 10px">Art. 19</span>
+          <span style="font-size:1rem;font-weight:700;color:var(--silver)">Derecho a No ser objeto de decisiones automatizadas</span>
+        </div>
+        <div class="m-section-desc">
+          Ninguna empresa puede tomar <strong style="color:var(--silver)">decisiones que afecten significativamente a una persona basándose únicamente en algoritmos o inteligencia artificial</strong>, sin intervención humana. Si un sistema automatizado rechaza un crédito, niega un seguro o descarta una postulación laboral, el titular tiene derecho a pedir que una persona real revise esa decisión y recibir una explicación de cómo se llegó a ella.
+        </div>
+        <div style="margin-bottom:10px;padding:10px 14px;background:rgba(0,212,255,0.04);border:1px solid rgba(0,212,255,0.12);font-size:.78rem;color:var(--muted);line-height:1.7">
+          ⚪ <strong style="color:var(--cyan)">Por qué aparece "No verificable ext.":</strong> Este derecho aplica a los procesos internos de la empresa (sistemas de scoring, IA de RRHH, motores de decisión de crédito). Desde el exterior de un sitio web no es posible detectar si existe o no tal mecanismo, por lo que el estado se marca como no verificable. Requiere auditoría interna.
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div class="m-pen-item">
+            <span class="m-pen-badge">❌ Si no cumple</span>
+            <div class="m-pen-text">Una persona es rechazada por un algoritmo sin explicación ni posibilidad de revisión humana. Aplica a scoring crediticio, filtros de RRHH con IA, sistemas de detección de fraude automatizados, etc. Infracción grave, especialmente si involucra datos sensibles.</div>
+          </div>
+          <div class="m-bonus-item">
+            <span class="m-bonus-badge">✅ Cómo cumplir</span>
+            <div class="m-bonus-text">Documentar en la política de privacidad si se usan sistemas automatizados de decisión. Establecer un proceso de revisión humana ante solicitud del titular. Registrar la lógica del algoritmo para poder explicarla.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="m-divider"></div>
+
+      <!-- RESUMEN SANCIONES -->
+      <div class="m-section">
+        <div class="m-section-title">Resumen: incumplimiento y consecuencias</div>
+        <table class="m-dim-table">
+          <thead>
+            <tr>
+              <th>Derecho</th>
+              <th>Art.</th>
+              <th>Obligación concreta del responsable</th>
+              <th>Categoría infracción</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Acceso</td>
+              <td>14</td>
+              <td>Canal habilitado + respuesta en 30 días hábiles</td>
+              <td style="color:var(--warn);font-family:'JetBrains Mono',monospace;font-size:.6rem">Grave</td>
+            </tr>
+            <tr>
+              <td>Rectificación</td>
+              <td>15</td>
+              <td>Corrección en 30 días + notificación a terceros receptores</td>
+              <td style="color:var(--warn);font-family:'JetBrains Mono',monospace;font-size:.6rem">Grave</td>
+            </tr>
+            <tr>
+              <td>Supresión</td>
+              <td>16</td>
+              <td>Eliminación efectiva + cascada a terceros + plazo definido</td>
+              <td style="color:var(--danger);font-family:'JetBrains Mono',monospace;font-size:.6rem">Grave / Gravísima</td>
+            </tr>
+            <tr>
+              <td>Oposición</td>
+              <td>17</td>
+              <td>Cese inmediato del tratamiento objetado + canal de opt-out</td>
+              <td style="color:var(--warn);font-family:'JetBrains Mono',monospace;font-size:.6rem">Grave</td>
+            </tr>
+            <tr>
+              <td>Portabilidad</td>
+              <td>18</td>
+              <td>Entrega de datos en formato estructurado en 30 días</td>
+              <td style="color:var(--warn);font-family:'JetBrains Mono',monospace;font-size:.6rem">Grave</td>
+            </tr>
+            <tr>
+              <td>No automatización</td>
+              <td>19</td>
+              <td>Revisión humana disponible + explicación de la lógica del algoritmo</td>
+              <td style="color:var(--danger);font-family:'JetBrains Mono',monospace;font-size:.6rem">Grave / Gravísima</td>
+            </tr>
+          </tbody>
+        </table>
+        <div style="margin-top:12px;padding:10px 14px;background:rgba(245,158,11,0.05);border:1px solid rgba(245,158,11,0.18);font-size:.78rem;color:var(--muted);line-height:1.7">
+          🟡 <strong style="color:var(--warn)">Las infracciones graves pueden implicar hasta 1.000 UTM (~$65 millones CLP)</strong> y las gravísimas hasta 5.000 UTM (~$325 millones CLP). Además, la Agencia de Protección de Datos puede ordenar la suspensión del tratamiento de datos y publicar el nombre del infractor en un registro público.
+        </div>
+      </div>
+
+      <div class="m-divider"></div>
+
+      <div style="padding:14px 16px;border:1px solid rgba(0,212,255,0.08);background:rgba(0,212,255,0.02);font-family:'JetBrains Mono',monospace;font-size:.62rem;color:var(--muted);line-height:1.8">
+        ⚠ La evidencia del estado de cada derecho se determina desde el exterior del sitio. "No detectado" significa que el escáner no encontró un mecanismo visible (enlace, formulario, sección en política de privacidad). El responsable puede tener canales internos no detectables externamente. Para una evaluación completa se recomienda auditoría interna. — ShellTI Technology Consultancy
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+function openArcoModal() {
+  document.getElementById('arcoModal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeArcoModal() {
+  document.getElementById('arcoModal').classList.remove('open');
+  document.body.style.overflow = '';
+}
+function handleArcoOverlayClick(e) {
+  if (e.target === document.getElementById('arcoModal')) closeArcoModal();
+}
+</script>
+
+</body>
+</html>
