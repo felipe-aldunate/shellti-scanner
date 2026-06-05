@@ -341,7 +341,7 @@ function barColor(ms, okMs, warnMs) {
 
 // ─── CRAWL via Claude API ─────────────────────────────────────────────────────
 async function crawlViaAI(url) {
-  const res = await fetch('http://localhost:3000/performance', {
+  const res = await fetch('/performance', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ url })

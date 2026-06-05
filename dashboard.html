@@ -865,7 +865,7 @@ async function runScan() {
   const timeout = setTimeout(() => controller.abort(), 60000);
 
   try {
-    const fetchPromise = fetch('http://localhost:3000/scan', {
+    const fetchPromise = fetch('/scan', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ url }),

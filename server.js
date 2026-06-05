@@ -9,7 +9,7 @@ const scanWebsite = require('./scanWebsite');
 const analyze     = require('./analyze');
 
 const app  = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;  // Railway inyecta PORT automáticamente
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
@@ -175,7 +175,7 @@ Devuelve SOLO JSON válido, sin markdown, sin texto extra:
   try {
     const response = await groq.chat.completions.create({
       model: 'llama-3.3-70b-versatile',
-      temperature: 0,           // determinístico
+      temperature: 0,
       max_tokens: 3000,
       messages: [
         {
@@ -198,6 +198,7 @@ Devuelve SOLO JSON válido, sin markdown, sin texto extra:
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`Scanner corriendo en http://localhost:${PORT}`);
+// Railway escucha en 0.0.0.0 para aceptar conexiones externas
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Scanner corriendo en http://0.0.0.0:${PORT}`);
 });
