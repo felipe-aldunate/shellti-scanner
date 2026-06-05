@@ -15,7 +15,14 @@ const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname)));
+const PUBLIC_DIR = process.env.RAILWAY_ENVIRONMENT ? '/app' : __dirname;
+
+app.use(express.static(PUBLIC_DIR));
+
+// Ruta raíz → dashboard
+app.get('/', (req, res) => {
+  res.sendFile(path.join(PUBLIC_DIR, 'dashboard.html'));
+});
 
 // ── helpers ─────────────────────────────────────────────────────────────────
 function extractJSON(raw) {
