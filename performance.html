@@ -328,7 +328,13 @@ function clearAll() {
   document.getElementById('dashboard').classList.remove('visible');
   document.getElementById('btnExport').classList.remove('visible');
   hideStatus(); hideError();
-  try { sessionStorage.removeItem('shellti_perf'); sessionStorage.removeItem('shellti_pending_url'); } catch(e) {}
+  // Limpiar toda la memoria — el usuario limpió intencionalmente
+  try {
+    sessionStorage.removeItem('shellti_perf');
+    sessionStorage.removeItem('shellti_pending_url');
+    sessionStorage.removeItem('shellti_audit');
+    sessionStorage.setItem('shellti_cleared', '1');
+  } catch(e) {}
   document.getElementById('urlInput').focus();
 }
 function gradeColor(g) {
@@ -795,6 +801,11 @@ function syncUrlToAudit(e) {
 
 (function restorePerf() {
   try {
+    // Si el usuario limpió intencionalmente, no restaurar nada
+    if (sessionStorage.getItem('shellti_cleared') === '1') {
+      sessionStorage.removeItem('shellti_cleared');
+      return;
+    }
     const saved = sessionStorage.getItem('shellti_perf');
     if (saved) {
       const { p, url, ts } = JSON.parse(saved);
@@ -803,7 +814,7 @@ function syncUrlToAudit(e) {
       renderAll(p, url);
       return;
     }
-    // Auto-run if pending URL from audit tab
+    // Auto-run si viene con URL pendiente desde auditoría
     const pending = sessionStorage.getItem('shellti_pending_url');
     if (pending) {
       document.getElementById('urlInput').value = pending;

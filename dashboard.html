@@ -843,8 +843,15 @@ function clearAll() {
     const color = id.replace('sl-','');
     el.className = `s-light s-${color} s-off`;
   });
+  document.getElementById('btnExport').style.display = 'none';
+  // Limpiar toda la memoria — el usuario limpió intencionalmente
+  try {
+    sessionStorage.removeItem('shellti_audit');
+    sessionStorage.removeItem('shellti_pending_url');
+    sessionStorage.removeItem('shellti_perf');
+    sessionStorage.setItem('shellti_cleared', '1');
+  } catch(e) {}
   document.getElementById('urlInput').focus();
-  try { sessionStorage.removeItem('shellti_audit'); sessionStorage.removeItem('shellti_pending_url'); } catch(e) {}
 }
 
 async function runScan() {
@@ -903,6 +910,11 @@ function syncUrlToPerf(e) {
 
 (function restoreAudit() {
   try {
+    // Si el usuario limpió intencionalmente, no restaurar nada
+    if (sessionStorage.getItem('shellti_cleared') === '1') {
+      sessionStorage.removeItem('shellti_cleared');
+      return;
+    }
     const saved = sessionStorage.getItem('shellti_audit');
     if (saved) {
       const { data, crawlerData, url } = JSON.parse(saved);
@@ -911,7 +923,7 @@ function syncUrlToPerf(e) {
       document.getElementById('dashboard').classList.add('visible');
       return;
     }
-    // Auto-run if pending URL from performance tab
+    // Auto-run si viene con URL pendiente desde performance tab
     const pending = sessionStorage.getItem('shellti_pending_url');
     if (pending) {
       document.getElementById('urlInput').value = pending;
