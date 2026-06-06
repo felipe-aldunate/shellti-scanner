@@ -4,16 +4,55 @@ async function scanWebsite(url) {
 
     const browser = await chromium.launch({
         headless: true,
-        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+        args: [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-http2',                        // Fix ERR_HTTP2_PROTOCOL_ERROR en sitios bancarios
+            '--disable-blink-features=AutomationControlled', // Ocultar detección headless
+            '--disable-features=IsolateOrigins',
+            '--disable-site-isolation-trials'
+        ]
     });
 
     const page = await browser.newPage();
 
-    // ✅ Fix 1: capturar response en la PRIMERA navegación
-    const response = await page.goto(url, {
-        waitUntil: 'domcontentloaded', // ✅ Fix 2: no esperar networkidle
-        timeout: 20000
+    // User-agent realista de Chrome en macOS — evita bloqueos por WAF
+    await page.setExtraHTTPHeaders({
+        'Accept-Language': 'es-CL,es;q=0.9,en-US;q=0.8,en;q=0.7',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+        'sec-ch-ua': '"Chromium";v="125", "Google Chrome";v="125", "Not-A.Brand";v="99"',
+        'sec-ch-ua-mobile': '?0',
+        'sec-ch-ua-platform': '"macOS"',
+        'Upgrade-Insecure-Requests': '1'
     });
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.addInitScript(() => {
+        // Ocultar navigator.webdriver (detectado por Cloudflare y Akamai)
+        Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+    });
+
+    // Fix 1: capturar response en la PRIMERA navegación
+    // Fix 2: timeout extendido + fallback a load si domcontentloaded falla
+    let response = null;
+    try {
+        response = await page.goto(url, {
+            waitUntil: 'domcontentloaded',
+            timeout: 25000
+        });
+    } catch (firstErr) {
+        // Fallback: intentar con 'load' y timeout más generoso
+        // Útil para sitios con redirects lentos o HTTP/1.1 forzado
+        try {
+            response = await page.goto(url, {
+                waitUntil: 'load',
+                timeout: 35000
+            });
+        } catch (secondErr) {
+            await browser.close();
+            throw new Error(`No se pudo acceder al sitio: ${firstErr.message}`);
+        }
+    }
 
     // Dar tiempo al JS para ejecutarse
     await page.waitForTimeout(2000);
