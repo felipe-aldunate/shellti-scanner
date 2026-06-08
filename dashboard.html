@@ -249,6 +249,16 @@ nav{
 
 .nota{margin-top:40px;padding:14px 18px;border:1px solid rgba(0,212,255,0.1);background:rgba(0,212,255,0.03);font-family:'JetBrains Mono',monospace;font-size:.65rem;color:var(--muted);line-height:1.8}
 .sem-emoji{font-size:.8rem}
+.prog-step{display:flex;flex-direction:column;align-items:center;gap:5px;flex:0 0 auto}
+.step-dot{width:10px;height:10px;border-radius:50%;background:rgba(0,212,255,0.15);border:1px solid rgba(0,212,255,0.3);transition:all .4s}
+.step-dot.active{background:var(--cyan);box-shadow:0 0 8px rgba(0,212,255,0.6);border-color:var(--cyan)}
+.step-dot.done{background:var(--ok);box-shadow:0 0 6px rgba(52,211,153,0.5);border-color:var(--ok)}
+.step-label{font-family:'JetBrains Mono',monospace;font-size:.55rem;color:var(--muted);letter-spacing:.5px;white-space:nowrap;transition:color .4s}
+.step-label.active{color:var(--cyan)}
+.step-label.done{color:var(--ok)}
+.prog-line{flex:1;height:1px;background:rgba(0,212,255,0.15);margin:0 6px;margin-bottom:14px;position:relative;overflow:hidden}
+.prog-line::after{content:'';position:absolute;top:0;left:0;height:100%;width:0%;background:var(--ok);transition:width .6s ease}
+.prog-line.done::after{width:100%}
 
 /* DERECHOS ARCO TABLE — NUEVO */
 .arco-table{width:100%;border-collapse:collapse}
@@ -665,11 +675,12 @@ nav{
     </div>
     <div style="display:flex;align-items:center;height:54px;gap:0">
       <a href="dashboard.html" style="font-family:'JetBrains Mono',monospace;font-size:.6rem;letter-spacing:1.5px;text-transform:uppercase;padding:0 18px;height:100%;display:flex;align-items:center;text-decoration:none;color:var(--cyan);border-bottom:2px solid var(--cyan)">Auditoría</a>
-      <a href="performance.html" style="font-family:'JetBrains Mono',monospace;font-size:.6rem;letter-spacing:1.5px;text-transform:uppercase;padding:0 18px;height:100%;display:flex;align-items:center;text-decoration:none;color:var(--muted);border-bottom:2px solid transparent;transition:color .2s" onclick="syncUrlToPerf(event)">Performance</a>
+      <a href="performance.html" id="perfTabLink" style="font-family:'JetBrains Mono',monospace;font-size:.6rem;letter-spacing:1.5px;text-transform:uppercase;padding:0 18px;height:100%;display:flex;align-items:center;text-decoration:none;color:var(--muted);border-bottom:2px solid transparent;transition:color .2s" onclick="goToPerf(event)">Performance</a>
     </div>
-    <div style="display:flex;align-items:center;gap:12px">
+    <div class="nav-right" style="display:flex;align-items:center;gap:12px">
       <button class="btn-export" id="btnExport" style="display:none" onclick="exportPDF()">⬇ PDF</button>
       <div class="nav-tag">Herramienta Interna</div>
+      <button onclick="logout()" style="background:transparent;border:1px solid rgba(255,107,107,0.3);color:rgba(255,107,107,0.7);font-family:'JetBrains Mono',monospace;font-size:.58rem;letter-spacing:1.5px;text-transform:uppercase;padding:5px 12px;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='rgba(255,107,107,0.7)';this.style.color='var(--danger)'" onmouseout="this.style.borderColor='rgba(255,107,107,0.3)';this.style.color='rgba(255,107,107,0.7)'">Salir →</button>
     </div>
   </div>
   <!-- UNIFIED SEARCH BAR IN NAV -->
@@ -685,9 +696,44 @@ nav{
 <div class="main">
 
   <div class="search-section" style="margin-bottom:32px">
-    <div class="status" id="status">
-      <div class="spinner"></div>
-      <span id="statusText">Escaneando sitio...</span>
+    <!-- PROGRESS BOX -->
+    <div id="progressBox" style="display:none;background:var(--card);border:1px solid var(--border);padding:20px 24px;margin-bottom:12px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div class="spinner"></div>
+          <span id="statusText" style="font-family:'JetBrains Mono',monospace;font-size:.75rem;color:var(--cyan);letter-spacing:.5px">Iniciando...</span>
+        </div>
+        <span id="progressPct" style="font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--muted)">0%</span>
+      </div>
+      <!-- Progress bar -->
+      <div style="height:2px;background:rgba(0,212,255,0.1);border-radius:1px;overflow:hidden;margin-bottom:14px">
+        <div id="progressBar" style="height:100%;background:linear-gradient(90deg,var(--cyan),var(--green));width:0%;transition:width .8s ease;border-radius:1px"></div>
+      </div>
+      <!-- Steps -->
+      <div style="display:flex;gap:0;align-items:center">
+        <div class="prog-step" id="step1" data-label="Accediendo al sitio">
+          <div class="step-dot"></div>
+          <div class="step-label">Accediendo</div>
+        </div>
+        <div class="prog-line" id="line1"></div>
+        <div class="prog-step" id="step2" data-label="Analizando contenido">
+          <div class="step-dot"></div>
+          <div class="step-label">Escaneando</div>
+        </div>
+        <div class="prog-line" id="line2"></div>
+        <div class="prog-step" id="step3" data-label="Análisis con IA">
+          <div class="step-dot"></div>
+          <div class="step-label">IA</div>
+        </div>
+        <div class="prog-line" id="line3"></div>
+        <div class="prog-step" id="step4" data-label="Generando informe">
+          <div class="step-dot"></div>
+          <div class="step-label">Informe</div>
+        </div>
+      </div>
+      <div id="progressNote" style="font-family:'JetBrains Mono',monospace;font-size:.6rem;color:var(--muted);margin-top:10px;letter-spacing:.3px">
+        El análisis normativo puede tomar 30–60 segundos
+      </div>
     </div>
     <div class="error-box" id="errorBox"></div>
   </div>
@@ -843,49 +889,201 @@ function clearAll() {
     const color = id.replace('sl-','');
     el.className = `s-light s-${color} s-off`;
   });
+  document.getElementById('btnExport').style.display = 'none';
+  // Limpiar toda la memoria — el usuario limpió intencionalmente
+  try {
+    localStorage.removeItem('shellti_audit');
+    sessionStorage.removeItem('shellti_pending_url');
+    localStorage.removeItem('shellti_perf');
+    localStorage.setItem('shellti_cleared', '1');
+  } catch(e) {}
   document.getElementById('urlInput').focus();
-  try { sessionStorage.removeItem('shellti_audit'); sessionStorage.removeItem('shellti_pending_url'); } catch(e) {}
+}
+
+// ── Auth ─────────────────────────────────────────────────────────────────────
+function getToken() {
+  const urlToken = new URLSearchParams(window.location.search).get('token');
+  if (urlToken) {
+    const stored = localStorage.getItem('shellti_token');
+    if (stored && stored !== urlToken) {
+      // Token diferente = nuevo usuario → limpiar resultados anteriores
+      localStorage.removeItem('shellti_audit');
+      localStorage.removeItem('shellti_perf');
+      localStorage.removeItem('shellti_shared_url');
+      localStorage.removeItem('shellti_autorun_perf');
+    }
+    localStorage.setItem('shellti_token', urlToken);
+    // Limpiar token de la URL sin recargar
+    const url = new URL(window.location.href);
+    url.searchParams.delete('token');
+    window.history.replaceState({}, '', url.toString());
+    return urlToken;
+  }
+  return localStorage.getItem('shellti_token') || '';
+}
+
+(function checkAuth() {
+  const token = getToken();
+  if (!token) { window.location.href = '/'; return; }
+  // Validación inicial estricta — solo redirige si el token no existe en el sistema
+  // El status-widget.js maneja el cronómetro y badge de consultas
+  fetch('/auth/validate', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ token, strict: false })
+  }).then(r=>r.json()).then(d=>{
+    if (!d.valid) { localStorage.removeItem('shellti_token'); window.location.href='/'; return; }
+    // Bloquear botón si no puede hacer más consultas
+    if (!d.canScan) blockScanBtn(d.expired ? 'Sesión expirada' : 'Sin consultas disponibles');
+  }).catch(()=>{ /* error de red — no redirigir */ });
+})();
+
+function startCountdown(expiresAtStr) {
+  const expiresAt = new Date(expiresAtStr);
+  const el = document.getElementById('sessionTimer');
+  if (!el) return;
+  function tick() {
+    const diff = expiresAt - new Date();
+    if (diff <= 0) {
+      el.textContent = '⏱ Sesión expirada';
+      el.style.color = 'var(--danger)';
+      el.style.borderColor = 'rgba(255,107,107,0.35)';
+      el.style.display = 'block';
+      blockScanBtn('Sesión expirada — no puedes realizar nuevas consultas');
+      return;
+    }
+    const days = Math.floor(diff / 86400000);
+    const hrs  = Math.floor((diff % 86400000) / 3600000);
+    const mins = Math.floor((diff % 3600000)  / 60000);
+    const secs = Math.floor((diff % 60000)    / 1000);
+    let txt;
+    if (days > 0)      txt = `⏱ ${days}d ${hrs}h restantes`;
+    else if (hrs > 0)  txt = `⏱ ${hrs}h ${mins}m restantes`;
+    else if (mins > 0) txt = `⏱ ${mins}m ${secs}s restantes`;
+    else               txt = `⏱ ${secs}s restantes`;
+    const urgent = diff < 3600000;
+    el.textContent = txt;
+    el.style.display = 'block';
+    el.style.color = urgent ? 'var(--danger)' : 'var(--muted)';
+    el.style.borderColor = urgent ? 'rgba(255,107,107,0.35)' : 'rgba(0,212,255,0.15)';
+    setTimeout(tick, 1000);
+  }
+  tick();
+}
+
+function blockScanBtn(msg) {
+  const btn = document.getElementById('scanBtn') || document.querySelector('.btn-scan');
+  if (btn) { btn.disabled = true; btn.title = msg; }
+}
+
+function updateScansBadge(used, max) {
+  const el = document.getElementById('sessionScans');
+  if (!el || max == null) return;
+  const left = max - (used || 0);
+  el.style.display = 'block';
+  if (left <= 0) {
+    el.textContent = '🔍 Sin consultas disponibles';
+    el.style.color = 'var(--danger)';
+    el.style.borderColor = 'rgba(255,107,107,0.35)';
+    blockScanBtn('Sin consultas disponibles — has agotado tu límite');
+  } else {
+    el.textContent = `🔍 ${left}/${max} consultas`;
+    el.style.color = left === 1 ? 'var(--danger)' : left <= Math.ceil(max/3) ? 'var(--warn)' : 'var(--muted)';
+    el.style.borderColor = left === 1 ? 'rgba(255,107,107,0.35)' : 'rgba(0,212,255,0.15)';
+  }
+}
+
+// ── Progress helpers ─────────────────────────────────────────────────────────
+function setStep(n, pct, msg, note) {
+  document.getElementById('statusText').textContent = msg;
+  document.getElementById('progressPct').textContent = pct + '%';
+  document.getElementById('progressBar').style.width = pct + '%';
+  if (note) document.getElementById('progressNote').textContent = note;
+  [1,2,3,4].forEach(i => {
+    const dot   = document.querySelector('#step' + i + ' .step-dot');
+    const label = document.querySelector('#step' + i + ' .step-label');
+    if (!dot) return;
+    dot.className   = 'step-dot'   + (i < n ? ' done' : i === n ? ' active' : '');
+    label.className = 'step-label' + (i < n ? ' done' : i === n ? ' active' : '');
+  });
+  [1,2,3].forEach(i => {
+    const line = document.getElementById('line' + i);
+    if (line) line.className = 'prog-line' + (i < n ? ' done' : '');
+  });
+}
+
+function showProgress() {
+  document.getElementById('progressBox').style.display = 'block';
+  setStep(1, 5, 'Conectando al sitio...', 'Accediendo y renderizando el sitio web');
+}
+
+function hideProgress() {
+  document.getElementById('progressBox').style.display = 'none';
 }
 
 async function runScan() {
+  const blockReason = window.getScanBlockReason ? window.getScanBlockReason() : null;
+  if (blockReason) { const eb = document.getElementById('errorBox'); if(eb){eb.textContent='⚠ '+blockReason;eb.classList.add('visible');} return; }
   let url = document.getElementById('urlInput').value.trim();
   if (!url) return;
-  const btn = document.getElementById('scanBtn');
-  const status = document.getElementById('status');
-  const statusText = document.getElementById('statusText');
+
+  // Sync URL to performance tab
+  localStorage.setItem('shellti_shared_url', url);
+
+  const btn      = document.getElementById('scanBtn');
   const dashboard = document.getElementById('dashboard');
-  const errorBox = document.getElementById('errorBox');
+  const errorBox  = document.getElementById('errorBox');
+
   btn.disabled = true;
   dashboard.classList.remove('visible');
   errorBox.classList.remove('visible');
-  status.classList.add('visible');
-  statusText.textContent = 'Escaneando sitio...';
+  errorBox.textContent = '';
+  showProgress();
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 60000);
+  const timeout = setTimeout(() => controller.abort(), 90000);
+
+  // Simulate progress steps with realistic timings
+  const t1 = setTimeout(() => setStep(1, 15, 'Cargando el sitio...', 'Playwright renderizando el DOM'), 2000);
+  const t2 = setTimeout(() => setStep(2, 35, 'Analizando contenido...', 'Extrayendo scripts, trackers y formularios'), 8000);
+  const t3 = setTimeout(() => setStep(2, 55, 'Revisando headers HTTP...', 'Verificando HSTS, CSP, X-Frame-Options'), 15000);
+  const t4 = setTimeout(() => setStep(3, 70, 'Análisis con IA...', 'Llama 3.3 evaluando contra Ley 21.719 e ISO 27001'), 22000);
+  const t5 = setTimeout(() => setStep(3, 85, 'Procesando normativa...', 'Generando hallazgos y recomendaciones detalladas'), 35000);
+  const t6 = setTimeout(() => setStep(4, 95, 'Construyendo informe...', 'Casi listo...'), 50000);
 
   try {
     const fetchPromise = fetch('/scan', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'x-user-token': getToken() },
       body: JSON.stringify({ url }),
       signal: controller.signal
     });
-    setTimeout(() => { statusText.textContent = 'Analizando con IA...'; }, 8000);
-    setTimeout(() => { statusText.textContent = 'Generando informe experto...'; }, 20000);
     const res = await fetchPromise;
     clearTimeout(timeout);
+    [t1,t2,t3,t4,t5,t6].forEach(clearTimeout);
+    setStep(4, 100, 'Informe generado ✓', '');
     const json = await res.json();
     if (!res.ok) throw new Error(json.error || 'Error en el servidor');
+    await new Promise(r => setTimeout(r, 400)); // brief pause to show 100%
+    hideProgress();
     renderDashboard(json.data, json.crawlerData, url);
     dashboard.classList.add('visible');
-    try { sessionStorage.setItem('shellti_audit', JSON.stringify({data:json.data, crawlerData:json.crawlerData, url})); } catch(e) {}
+    try {
+      localStorage.setItem('shellti_shared_url', url);
+      localStorage.setItem('shellti_audit', JSON.stringify({data:json.data, crawlerData:json.crawlerData, url}));
+    } catch(e) {}
+    // Refrescar widget de sesión después de cada scan
+    if (window.refreshSessionStatus) window.refreshSessionStatus();
   } catch (err) {
     clearTimeout(timeout);
-    errorBox.textContent = '⚠ ' + (err.name === 'AbortError' ? 'Timeout: el sitio tardó demasiado en responder.' : err.message);
+    [t1,t2,t3,t4,t5,t6].forEach(clearTimeout);
+    hideProgress();
+    const _em = err.name === 'AbortError' ? 'Tiempo agotado. Intenta nuevamente.' : err.message;
+    errorBox.textContent = '⚠ ' + _em;
+    errorBox.classList.add('visible');
+    // original:  ? 'Timeout: el sitio tardó demasiado en responder.' : err.message);
     errorBox.classList.add('visible');
   } finally {
-    status.classList.remove('visible');
+    hideProgress();
     btn.disabled = false;
   }
 }
@@ -894,6 +1092,32 @@ document.getElementById('urlInput').addEventListener('keydown', e => {
   if (e.key === 'Enter') runScan();
 });
 
+// Restore shared URL from performance tab
+(function restoreSharedUrl() {
+  try {
+    const shared = localStorage.getItem('shellti_shared_url');
+    const input  = document.getElementById('urlInput');
+    if (shared && input && !input.value) input.value = shared;
+  } catch(e) {}
+})();
+
+function logout() {
+  localStorage.removeItem('shellti_token');
+  try { localStorage.removeItem('shellti_audit'); localStorage.removeItem('shellti_perf'); localStorage.removeItem('shellti_shared_url'); } catch(e) {}
+  window.location.href = '/';
+}
+
+function goToPerf(e) {
+  e.preventDefault();
+  const u = document.getElementById('urlInput').value.trim();
+  try {
+    if (u) localStorage.setItem('shellti_shared_url', u);
+    const hasResult = document.getElementById('dashboard').classList.contains('visible');
+    if (hasResult && u) localStorage.setItem('shellti_autorun_perf', '1');
+  } catch(e2) {}
+  window.location.href = 'performance.html';
+}
+
 function syncUrlToPerf(e) {
   const url = document.getElementById('urlInput').value.trim();
   if (url) {
@@ -901,9 +1125,13 @@ function syncUrlToPerf(e) {
   }
 }
 
-(function restoreAudit() {
+document.addEventListener('DOMContentLoaded', function restoreAudit() {
   try {
-    const saved = sessionStorage.getItem('shellti_audit');
+    if (localStorage.getItem('shellti_cleared') === '1') {
+      localStorage.removeItem('shellti_cleared');
+      return;
+    }
+    const saved = localStorage.getItem('shellti_audit');
     if (saved) {
       const { data, crawlerData, url } = JSON.parse(saved);
       document.getElementById('urlInput').value = url;
@@ -911,15 +1139,10 @@ function syncUrlToPerf(e) {
       document.getElementById('dashboard').classList.add('visible');
       return;
     }
-    // Auto-run if pending URL from performance tab
-    const pending = sessionStorage.getItem('shellti_pending_url');
-    if (pending) {
-      document.getElementById('urlInput').value = pending;
-      sessionStorage.removeItem('shellti_pending_url');
-      setTimeout(runScan, 100);
-    }
-  } catch(e) {}
-})();
+    const shared = localStorage.getItem('shellti_shared_url');
+    if (shared) document.getElementById('urlInput').value = shared;
+  } catch(e) { console.error('[restoreAudit]', e); }
+});
 
 function activateSemaforo(sem) {
   ['rojo','amarillo','verde'].forEach(c => {
@@ -1679,6 +1902,14 @@ ${renderRecsHtml()}
   w.document.write(html);
   w.document.close();
 }
+
+// ── Sync URL between tabs ─────────────────────────────────────────────────────
+window.addEventListener('storage', (e) => {
+  if (e.key === 'shellti_shared_url' && e.newValue) {
+    const input = document.getElementById('urlInput');
+    if (input && !input.value) input.value = e.newValue;
+  }
+});
 </script>
 <!-- MODAL: CÓMO SE CALCULA EL PUNTAJE -->
 <div class="modal-overlay" id="scoreModal" onclick="handleModalOverlayClick(event)">
@@ -2351,5 +2582,6 @@ function handleArcoOverlayClick(e) {
 }
 </script>
 
+<script src="/status-widget.js"></script>
 </body>
 </html>

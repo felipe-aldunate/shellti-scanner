@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Cerrando sesión...</title>
+<style>
+  body { background:#020617; display:flex; align-items:center; justify-content:center; height:100vh; margin:0; font-family:'JetBrains Mono',monospace; color:#94A3B8; }
+</style>
+</head>
+<body>
+<span>Cerrando sesión...</span>
+<script>
+  localStorage.removeItem('shellti_token');
+  localStorage.removeItem('shellti_audit');
+  localStorage.removeItem('shellti_perf');
+  localStorage.removeItem('shellti_shared_url');
+  localStorage.removeItem('shellti_autorun_perf');
+  localStorage.removeItem('shellti_cleared');
+  window.location.href = '/';
+</script>
+</body>
+</html>
