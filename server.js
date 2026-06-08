@@ -25,15 +25,22 @@ app.get('/dashboard.html', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'das
 app.get('/performance.html', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'performance.html')));
 
 // ── Mailer ────────────────────────────────────────────────────────────────────
+// App Password de Google se genera con espacios (ej: "nfrm rzdd eixl vsru")
+// nodemailer necesita la password sin espacios para SMTP
+const gmailPass = (process.env.GMAIL_APP_PASSWORD || '').replace(/\s+/g, '');
+
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_APP_PASSWORD }
+  host: 'smtp.gmail.com',
+  port: 465,
+  secure: true,
+  auth: { user: process.env.GMAIL_USER, pass: gmailPass }
 });
 
 async function sendMail(to, subject, html) {
   try {
     await transporter.sendMail({ from: `ShellTI Scanner <${process.env.GMAIL_USER}>`, to, subject, html });
-  } catch(e) { console.error('[mail]', e.message); }
+    console.log(`[mail] Enviado a ${to}: ${subject}`);
+  } catch(e) { console.error('[mail] ERROR:', e.message); }
 }
 
 // ── helpers ───────────────────────────────────────────────────────────────────
@@ -54,14 +61,15 @@ app.post('/auth/request', async (req, res) => {
   if (!name || !company || !email || !reason)
     return res.status(400).json({ error: 'Todos los campos son requeridos' });
   const r = auth.createRequest({ name, company, email, reason });
-  await sendMail(
+  // Responder de inmediato — email en background (fallo de SMTP no bloquea)
+  res.json({ success: true, id: r.id });
+  sendMail(
     process.env.ADMIN_GOOGLE_EMAIL || process.env.GMAIL_USER,
     `Nueva solicitud de acceso: ${name} (${company})`,
     `<h2>Nueva solicitud ShellTI Scanner</h2>
      <p><b>Nombre:</b> ${name}<br><b>Empresa:</b> ${company}<br><b>Email:</b> ${email}<br><b>Motivo:</b> ${reason}</p>
      <p><a href="${process.env.BASE_URL}/admin.html">Revisar en el panel admin →</a></p>`
-  );
-  res.json({ success: true, id: r.id });
+  ).catch(() => {});
 });
 
 app.post('/auth/validate', (req, res) => {
