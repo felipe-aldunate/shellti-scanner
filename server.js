@@ -1,111 +1,222 @@
-require('dotenv').config({ override: false });
+require('dotenv').config();
 
-const express      = require('express');
-const cors         = require('cors');
-const path         = require('path');
-const Groq         = require('groq-sdk');
-const nodemailer   = require('nodemailer');
-const auth         = require('./auth');
-const scanWebsite  = require('./scanWebsite');
-const analyze      = require('./analyze');
+const express        = require('express');
+const cors           = require('cors');
+const path           = require('path');
+const session        = require('express-session');
+const passport       = require('passport');
+const GoogleStrategy = require('passport-google-oauth20').Strategy;
+const Groq           = require('groq-sdk');
+const nodemailer     = require('nodemailer');
+const auth           = require('./auth');
+const scanWebsite    = require('./scanWebsite');
+const analyze        = require('./analyze');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
 
+// ── Log de variables al arrancar ──────────────────────────────────────────────
+console.log('[env] GMAIL_USER:', process.env.GMAIL_USER || 'NO CONFIGURADO');
+console.log('[env] GMAIL_APP_PASSWORD:', process.env.GMAIL_APP_PASSWORD ? 'OK' : 'NO CONFIGURADO');
+console.log('[env] GROQ_API_KEY:', process.env.GROQ_API_KEY ? 'OK' : 'NO CONFIGURADO');
+console.log('[env] GOOGLE_CLIENT_ID:', process.env.GOOGLE_CLIENT_ID ? 'OK' : 'NO CONFIGURADO');
+console.log('[env] BASE_URL:', process.env.BASE_URL || 'http://localhost:3000');
+
 app.use(cors());
 app.use(express.json());
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'shellti-secret-2024',
+  resave: false,
+  saveUninitialized: false,
+  cookie: { secure: process.env.RAILWAY_ENVIRONMENT ? true : false, maxAge: 24 * 60 * 60 * 1000 }
+}));
+app.use(passport.initialize());
+app.use(passport.session());
 
-const PUBLIC_DIR = process.env.RAILWAY_ENVIRONMENT ? '/app' : __dirname;
-app.use(express.static(PUBLIC_DIR));
-
-app.get('/', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'index.html')));
-app.get('/auth/logout', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'logout.html')));
-app.get('/admin.html', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'admin.html')));
-app.get('/dashboard.html', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'dashboard.html')));
-app.get('/performance.html', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'performance.html')));
+// ── Google OAuth ──────────────────────────────────────────────────────────────
+if (process.env.GOOGLE_CLIENT_ID) {
+  passport.use(new GoogleStrategy({
+      clientID:     process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      callbackURL:  `${process.env.BASE_URL || 'http://localhost:3000'}/auth/google/callback`
+    },
+    (accessToken, refreshToken, profile, done) => {
+      const email = profile.emails?.[0]?.value;
+      if (email !== process.env.ADMIN_GOOGLE_EMAIL) return done(null, false);
+      return done(null, { id: profile.id, name: profile.displayName, email, photo: profile.photos?.[0]?.value });
+    }
+  ));
+  passport.serializeUser((user, done)   => done(null, user));
+  passport.deserializeUser((user, done) => done(null, user));
+}
 
 // ── Mailer ────────────────────────────────────────────────────────────────────
-// App Password de Google se genera con espacios (ej: "nfrm rzdd eixl vsru")
-// nodemailer necesita la password sin espacios para SMTP
-const gmailPass = (process.env.GMAIL_APP_PASSWORD || '').replace(/\s+/g, '');
+function canEmail() {
+  return !!(process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD);
+}
 
-const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 465,
-  secure: true,
-  auth: { user: process.env.GMAIL_USER, pass: gmailPass }
-});
+function getMailer() {
+  // App Password puede venir con espacios (ej: "nfrm rzdd eixl vsru") — removerlos
+  const pass = (process.env.GMAIL_APP_PASSWORD || '').replace(/\s+/g, '');
+  return nodemailer.createTransport({
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true,
+    auth: {
+      user: process.env.GMAIL_USER,
+      pass
+    }
+  });
+}
 
 async function sendMail(to, subject, html) {
+  if (!canEmail()) {
+    console.warn('[mail] Gmail no configurado — email no enviado a:', to);
+    return;
+  }
   try {
-    await transporter.sendMail({ from: `ShellTI Scanner <${process.env.GMAIL_USER}>`, to, subject, html });
-    console.log(`[mail] Enviado a ${to}: ${subject}`);
-  } catch(e) { console.error('[mail] ERROR:', e.message); }
+    const info = await getMailer().sendMail({
+      from: `"ShellTI Scanner" <${process.env.GMAIL_USER}>`,
+      to, subject, html
+    });
+    console.log('[mail] Enviado a:', to, '| MessageId:', info.messageId);
+  } catch(e) {
+    console.error('[mail] ERROR:', e.message);
+    // Log detallado para debug
+    console.error('[mail] SMTP config:', {
+      user: process.env.GMAIL_USER,
+      passLength: process.env.GMAIL_APP_PASSWORD?.length
+    });
+  }
 }
 
-// ── helpers ───────────────────────────────────────────────────────────────────
+function getBase(req) {
+  return process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
 function extractJSON(raw) {
-  const fenced = raw.match(/```json\s*([\s\S]*?)\s*```/);
-  if (fenced) { try { return JSON.parse(fenced[1]); } catch(e) {} }
-  const fenced2 = raw.match(/```\s*([\s\S]*?)\s*```/);
-  if (fenced2) { try { return JSON.parse(fenced2[1]); } catch(e) {} }
-  const brace = raw.match(/\{[\s\S]*\}/);
-  if (brace) { try { return JSON.parse(brace[0]); } catch(e) {} }
+  const f1 = raw.match(/```json\s*([\s\S]*?)\s*```/);
+  if (f1) { try { return JSON.parse(f1[1]); } catch(e) {} }
+  const f2 = raw.match(/```\s*([\s\S]*?)\s*```/);
+  if (f2) { try { return JSON.parse(f2[1]); } catch(e) {} }
+  const b  = raw.match(/\{[\s\S]*\}/);
+  if (b)  { try { return JSON.parse(b[0]);  } catch(e) {} }
   try { return JSON.parse(raw); } catch(e) {}
-  throw new Error('No se pudo extraer JSON de la respuesta del modelo');
+  throw new Error('No se pudo extraer JSON');
 }
 
-// ── AUTH ──────────────────────────────────────────────────────────────────────
+function buildStatus(user) {
+  const expired   = new Date(user.expiresAt) < new Date();
+  const scansLeft = user.maxScans != null
+    ? Math.max(0, user.maxScans - (user.scansUsed || 0))
+    : null;
+  return {
+    name: user.name, email: user.email, expiresAt: user.expiresAt,
+    maxScans: user.maxScans ?? null, scansUsed: user.scansUsed || 0,
+    scansLeft, expired,
+    canScan: !expired && (scansLeft === null || scansLeft > 0)
+  };
+}
+
+// ── Middleware admin ──────────────────────────────────────────────────────────
+function requireAdmin(req, res, next) {
+  if (req.isAuthenticated()) return next();
+  const token = req.headers['x-admin-token'];
+  if (token && auth.validateAdminSession(token)) return next();
+  res.status(401).json({ error: 'No autorizado' });
+}
+
+// ── Rutas estáticas ───────────────────────────────────────────────────────────
+const PUBLIC_DIR = process.env.RAILWAY_ENVIRONMENT ? '/app' : __dirname;
+
+app.get('/', (req, res) => {
+  const token = req.query.token;
+  if (token) {
+    const user = auth.validateToken(token, { strict: false });
+    if (user) return res.redirect('/dashboard.html?token=' + token);
+  }
+  res.sendFile(path.join(PUBLIC_DIR, 'index.html'));
+});
+app.get('/dashboard.html',   (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'dashboard.html')));
+app.get('/performance.html', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'performance.html')));
+app.get('/admin',            (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'admin.html')));
+app.get('/admin.html',       (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'admin.html')));
+app.use(express.static(PUBLIC_DIR));
+
+// ── Google OAuth routes ───────────────────────────────────────────────────────
+app.get('/auth/google', (req, res, next) => {
+  if (!process.env.GOOGLE_CLIENT_ID) return res.redirect('/admin?error=oauth_not_configured');
+  passport.authenticate('google', { scope: ['profile', 'email'] })(req, res, next);
+});
+
+app.get('/auth/google/callback',
+  passport.authenticate('google', { failureRedirect: '/admin?error=unauthorized' }),
+  (req, res) => res.redirect(`/admin?adminToken=${auth.createAdminSession()}`)
+);
+
+app.get('/auth/google/status', (req, res) => {
+  if (req.isAuthenticated())
+    res.json({ authenticated: true, user: req.user, adminToken: auth.createAdminSession() });
+  else
+    res.json({ authenticated: false });
+});
+
+app.get('/auth/logout', (req, res) => {
+  req.logout(() => res.redirect('/'));
+});
+
+// ── Auth usuario ──────────────────────────────────────────────────────────────
 app.post('/auth/request', async (req, res) => {
   const { name, company, email, reason } = req.body;
   if (!name || !company || !email || !reason)
     return res.status(400).json({ error: 'Todos los campos son requeridos' });
+
   const r = auth.createRequest({ name, company, email, reason });
-  // Responder de inmediato — email en background (fallo de SMTP no bloquea)
-  res.json({ success: true, id: r.id });
-  sendMail(
-    process.env.ADMIN_GOOGLE_EMAIL || process.env.GMAIL_USER,
-    `Nueva solicitud de acceso: ${name} (${company})`,
-    `<h2>Nueva solicitud ShellTI Scanner</h2>
-     <p><b>Nombre:</b> ${name}<br><b>Empresa:</b> ${company}<br><b>Email:</b> ${email}<br><b>Motivo:</b> ${reason}</p>
-     <p><a href="${process.env.BASE_URL}/admin.html">Revisar en el panel admin →</a></p>`
-  ).catch(() => {});
+  console.log(`[auth] Nueva solicitud: ${name} <${email}>`);
+
+  await sendMail(
+    process.env.GMAIL_USER,
+    `[Scanner] Nueva solicitud — ${name} (${company})`,
+    `<div style="font-family:Arial,sans-serif;max-width:560px">
+      <div style="background:#020617;padding:20px;border-bottom:3px solid #00D4FF">
+        <h2 style="color:#00D4FF;margin:0">ShellTI Scanner</h2>
+        <p style="color:#94A3B8;margin:4px 0 0;font-size:12px">Nueva solicitud de acceso</p>
+      </div>
+      <div style="padding:20px;background:#f8fafc;border:1px solid #e2e8f0;border-top:none">
+        <table style="width:100%;font-size:14px;border-collapse:collapse">
+          <tr><td style="padding:5px 0;color:#64748b;width:80px">Nombre</td><td style="font-weight:600">${name}</td></tr>
+          <tr><td style="padding:5px 0;color:#64748b">Empresa</td><td style="font-weight:600">${company}</td></tr>
+          <tr><td style="padding:5px 0;color:#64748b">Email</td><td style="color:#0284c7">${email}</td></tr>
+          <tr><td style="padding:5px 0;color:#64748b;vertical-align:top">Motivo</td><td style="font-style:italic">${reason}</td></tr>
+        </table>
+        <div style="margin-top:20px;text-align:center">
+          <a href="${getBase(req)}/admin" style="background:#00D4FF;color:#020617;padding:10px 24px;text-decoration:none;font-weight:700;display:inline-block">ABRIR PANEL ADMIN →</a>
+        </div>
+      </div>
+    </div>`
+  );
+
+  res.json({ success: true });
 });
 
 app.post('/auth/validate', (req, res) => {
-  const { token, strict } = req.body;
-  const user = auth.validateToken(token, { strict: strict !== false });
-  res.json(user
-    ? { valid: true, name: user.name, expiresAt: user.expiresAt,
-        maxScans: user.maxScans ?? null, scansUsed: user.scansUsed ?? 0,
-        canScan: user.canScan !== false, expired: !!user.expired, scansDone: !!user.scansDone }
-    : { valid: false }
-  );
+  const { token } = req.body;
+  const user = auth.validateToken(token, { strict: false });
+  if (!user) return res.json({ valid: false });
+  res.json({ valid: true, ...buildStatus(user) });
 });
 
-// ── ADMIN middleware ──────────────────────────────────────────────────────────
-function requireAdmin(req, res, next) {
-  const token = req.headers['x-admin-token'];
-  if (token && auth.validateAdminSession(token)) return next();
-  const pwd = req.headers['x-admin-password'];
-  if (pwd && pwd === process.env.ADMIN_PASSWORD) {
-    const session = auth.createAdminSession();
-    res.setHeader('x-admin-token', session);
-    return next();
-  }
-  res.status(401).json({ error: 'No autorizado' });
-}
-
+// ── Admin ─────────────────────────────────────────────────────────────────────
 app.post('/admin/login', (req, res) => {
   const { password } = req.body;
-  if (password !== process.env.ADMIN_PASSWORD)
+  if (password !== (process.env.ADMIN_PASSWORD || 'ShellTI2024!'))
     return res.status(401).json({ error: 'Contraseña incorrecta' });
-  const token = auth.createAdminSession();
-  res.json({ success: true, token });
+  res.json({ token: auth.createAdminSession() });
 });
 
 app.get('/admin/requests', requireAdmin, (req, res) => {
-  res.json({ requests: auth.getRequests() });
+  res.json({ requests: auth.getRequests(), users: auth.getUsers() });
 });
 
 app.get('/admin/users', requireAdmin, (req, res) => {
@@ -115,109 +226,135 @@ app.get('/admin/users', requireAdmin, (req, res) => {
 app.post('/admin/approve/:id', requireAdmin, async (req, res) => {
   const { durationMs, durationLabel, maxScans } = req.body;
   if (!durationMs) return res.status(400).json({ error: 'Duración requerida' });
+
   const r = auth.approveRequest(req.params.id, durationMs, durationLabel, maxScans ? parseInt(maxScans) : null);
   if (!r) return res.status(404).json({ error: 'Solicitud no encontrada' });
-  const scansTxt = maxScans ? ` con límite de ${maxScans} consultas` : '';
-  const accessUrl = `${process.env.BASE_URL}/dashboard.html?token=${r.accessToken}`;
+
+  console.log(`[admin] Aprobado: ${r.email} por ${durationLabel}${maxScans ? ` · ${maxScans} consultas` : ''}`);
+
+  const accessUrl = `${getBase(req)}/?token=${r.accessToken}`;
+  const expires   = new Date(r.expiresAt).toLocaleString('es-CL', {
+    dateStyle: 'full', timeStyle: 'short', timeZone: 'America/Santiago'
+  });
+  const scansInfo = maxScans
+    ? `<p style="color:#475569">Consultas disponibles: <strong>${maxScans}</strong></p>`
+    : `<p style="color:#475569">Consultas: <strong>ilimitadas</strong></p>`;
+
   await sendMail(
     r.email,
-    'Tu acceso a ShellTI Scanner ha sido aprobado',
-    `<h2>¡Acceso aprobado!</h2>
-     <p>Hola ${r.name}, tu solicitud ha sido aprobada por <b>${durationLabel}</b>${scansTxt}.</p>
-     <p><a href="${accessUrl}" style="background:#00D4FF;color:#020617;padding:12px 24px;text-decoration:none;font-weight:bold">Acceder al Scanner →</a></p>
-     <p style="color:#666;font-size:12px">O copia este enlace: ${accessUrl}</p>`
+    `[ShellTI] Tu acceso al Scanner ha sido aprobado`,
+    `<div style="font-family:Arial,sans-serif;max-width:560px">
+      <div style="background:#020617;padding:20px;border-bottom:3px solid #00D4FF">
+        <h2 style="color:#00D4FF;margin:0">ShellTI Scanner</h2>
+      </div>
+      <div style="padding:20px;background:#f8fafc;border:1px solid #e2e8f0;border-top:none">
+        <p>Hola <strong>${r.name}</strong>,</p>
+        <p>Tu solicitud ha sido aprobada por <strong>${durationLabel}</strong>.</p>
+        ${scansInfo}
+        <div style="background:#f1f5f9;border-left:3px solid #00D4FF;padding:12px 16px;margin:16px 0">
+          <p style="margin:0;font-size:11px;color:#64748b;text-transform:uppercase">Acceso válido hasta</p>
+          <p style="margin:4px 0 0;font-weight:700;font-size:15px">${expires}</p>
+        </div>
+        <div style="text-align:center;margin:20px 0">
+          <a href="${accessUrl}" style="background:#00D4FF;color:#020617;padding:14px 36px;text-decoration:none;font-weight:700;font-size:14px;display:inline-block">ACCEDER AL SCANNER →</a>
+        </div>
+        <p style="font-size:11px;color:#94a3b8;text-align:center;word-break:break-all">
+          <a href="${accessUrl}" style="color:#0284c7">${accessUrl}</a>
+        </p>
+        <p style="font-size:11px;color:#e05a5a;text-align:center">⚠ Enlace personal e intransferible.</p>
+      </div>
+    </div>`
   );
-  res.json({ success: true, request: r });
+
+  res.json({ success: true, emailSent: canEmail() });
 });
 
 app.post('/admin/reject/:id', requireAdmin, async (req, res) => {
-  const requests = auth.getRequests();
-  const r = requests.find(x => x.id === req.params.id);
-  if (!r) return res.status(404).json({ error: 'Solicitud no encontrada' });
+  const r = auth.getRequest(req.params.id);
+  if (!r) return res.status(404).json({ error: 'No encontrada' });
   r.status = 'rejected';
-  await sendMail(r.email, 'Solicitud de acceso a ShellTI Scanner',
-    `<p>Hola ${r.name}, tu solicitud de acceso no fue aprobada en esta ocasión.</p>`);
+  await sendMail(r.email, '[ShellTI] Solicitud de acceso',
+    `<p>Hola ${r.name}, en esta oportunidad no fue posible aprobar tu solicitud. Contacto: <a href="mailto:contacto@shellti.com">contacto@shellti.com</a></p>`
+  );
   res.json({ success: true });
 });
 
 app.post('/admin/revoke', requireAdmin, (req, res) => {
-  const { email } = req.body;
-  const user = auth.revokeUser(email);
-  if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
+  const user = auth.revokeUser(req.body.email);
+  if (!user) return res.status(404).json({ error: 'No encontrado' });
   res.json({ success: true });
 });
 
-// ── SCAN ──────────────────────────────────────────────────────────────────────
-// ── Caché de resultados de auditoría por dominio (evita alucinaciones) ────────
-const scanCache = new Map(); // domain → { data, crawlerData, ts }
-const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 horas
+// ── Verificar acceso para scan ────────────────────────────────────────────────
+function checkScanAccess(req, res, next) {
+  const token = req.headers['x-user-token'];
+  if (!token) return res.status(401).json({ error: 'Token requerido' });
+  const user = auth.validateToken(token, { strict: false });
+  if (!user) return res.status(401).json({ error: 'Token inválido' });
+  const status = buildStatus(user);
+  if (status.expired) return res.status(403).json({ error: 'Acceso expirado', code: 'EXPIRED', status });
+  if (status.scansLeft !== null && status.scansLeft <= 0)
+    return res.status(403).json({ error: 'Consultas agotadas', code: 'NO_SCANS', status });
+  req.userToken = token;
+  next();
+}
 
-app.post('/scan', async (req, res) => {
+// ── Scan ──────────────────────────────────────────────────────────────────────
+const scanCache = new Map();
+const CACHE_TTL = 24 * 60 * 60 * 1000;
+
+app.post('/scan', checkScanAccess, async (req, res) => {
   let { url } = req.body;
   if (!url) return res.status(400).json({ error: 'URL requerida' });
   if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
 
-  // Verificar token si viene
-  const userToken = req.headers['x-user-token'];
-  if (userToken) {
-    const user = auth.validateToken(userToken, { strict: true });
-    if (!user) return res.status(403).json({ error: 'Sesión expirada o sin consultas disponibles.', code: 'NO_ACCESS' });
-    auth.incrementScan(userToken);
-    // Guardar URL en caché para que Performance no cuente otra consulta
-    req.app.locals.lastCrawl = req.app.locals.lastCrawl || {};
-    const domain = new URL(url).hostname;
-    req.app.locals.lastCrawl[userToken] = { url, domain, ts: Date.now() };
-  }
-
   try {
     const domain = new URL(url).hostname;
     const cached = scanCache.get(domain);
-
-    // Si hay caché válido del mismo dominio, retornar sin llamar a Groq
     if (cached && (Date.now() - cached.ts) < CACHE_TTL) {
       console.log(`[/scan] Cache hit: ${domain}`);
-      return res.json({ success: true, data: cached.data, crawlerData: cached.crawlerData, fromCache: true });
+      // Igual contar la consulta aunque sea caché
+      auth.incrementScan(req.userToken);
+      const updatedUser = auth.validateToken(req.userToken, { strict: false });
+      return res.json({ success: true, data: cached.data, crawlerData: cached.crawlerData, fromCache: true, status: updatedUser ? buildStatus(updatedUser) : null });
     }
+
+    // Contar ANTES para reservar la consulta
+    auth.incrementScan(req.userToken);
 
     const crawlerData = await scanWebsite(url);
     const raw         = await analyze(crawlerData);
     const json        = extractJSON(raw);
+
     if (!json.madurezTecnologica) json.madurezTecnologica = {};
     if (!json.madurezTecnologica.puntuacion) {
       const mapa = { incipiente: 20, basico: 40, intermedio: 60, avanzado: 85 };
-      json.madurezTecnologica.puntuacion = mapa[(json.madurezTecnologica.nivel || '').toLowerCase()] || 30;
+      json.madurezTecnologica.puntuacion = mapa[(json.madurezTecnologica.nivel||'').toLowerCase()] || 30;
     }
     if (!json.madurezTecnologica.semaforo) {
       const p = json.madurezTecnologica.puntuacion;
       json.madurezTecnologica.semaforo = p >= 70 ? 'verde' : p >= 40 ? 'amarillo' : 'rojo';
     }
-    // Guardar en caché del servidor
+
     scanCache.set(domain, { data: json, crawlerData, ts: Date.now() });
-    res.json({ success: true, data: json, crawlerData });
-  } catch (err) {
+
+    const updatedUser = auth.validateToken(req.userToken, { strict: false });
+    res.json({ success: true, data: json, crawlerData, status: updatedUser ? buildStatus(updatedUser) : null });
+  } catch(err) {
     console.error('/scan error:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
 
-// ── PERFORMANCE ───────────────────────────────────────────────────────────────
-app.post('/performance', async (req, res) => {
+// ── Performance (NO cuenta consulta) ─────────────────────────────────────────
+app.post('/performance', checkScanAccess, async (req, res) => {
   let { url } = req.body;
   if (!url) return res.status(400).json({ error: 'URL requerida' });
   if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
 
-  const userToken = req.headers['x-user-token'];
-  // Performance NUNCA cuenta consulta — es parte del mismo análisis que Auditoría
-  // Solo verificar que el token sea válido (no expirado)
-  if (userToken) {
-    const user = auth.validateToken(userToken, { strict: false });
-    if (!user) return res.status(403).json({ error: 'Token inválido.', code: 'NO_ACCESS' });
-  }
-
-  const perfPrompt = `Eres un analizador de performance web experto. Analiza técnicamente el sitio: ${url}
-Genera un objeto JSON con datos técnicos REALISTAS y CONSISTENTES para este dominio.
-Devuelve SOLO JSON válido, sin markdown, sin texto extra:
-{"domain":"dominio.com","ip":"X.X.X.X","ipv6":null,"asn":"AS12345","isp":"ISP","country":"País","city":"Ciudad","cdn":"Cloudflare","hosting":"Proveedor","httpVersion":"HTTP/2","serverSoftware":"nginx","ttfb":180,"dnsResolution":28,"tcpHandshake":45,"tlsHandshake":92,"firstByte":180,"fullyLoaded":2400,"domContentLoaded":1100,"transferSize":850,"resourceCount":42,"compressionRatio":74,"cacheHitRate":82,"redirectCount":1,"redirectChain":[{"from":"http://dominio.com","code":301,"to":"https://dominio.com"}],"dnsChain":["8.8.8.8","ns1.dominio.com"],"tls":{"version":"TLS 1.3","cipher":"TLS_AES_256_GCM_SHA384","certIssuer":"Let's Encrypt","certExpiry":"2026-09-14","certDaysLeft":101,"hsts":true,"ocspStapling":true,"certTransparency":true},"headers":{"server":"cloudflare","contentEncoding":"gzip","cacheControl":"public, max-age=31536000","xCacheStatus":"HIT","contentSecurityPolicy":"ausente","xFrameOptions":"SAMEORIGIN","strictTransportSecurity":"max-age=31536000","referrerPolicy":"strict-origin-when-cross-origin","permissionsPolicy":"ausente","vary":"Accept-Encoding","etag":"presente"},"techStack":[{"name":"Nginx","category":"Servidor"}],"waterfall":[{"resource":"HTML principal","type":"document","ms":180,"color":"#00D4FF"},{"resource":"CSS crítico","type":"stylesheet","ms":120,"color":"#A78BFA"},{"resource":"main.js","type":"script","ms":340,"color":"#F59E0B"},{"resource":"hero-image.webp","type":"image","ms":210,"color":"#34D399"}],"performanceScore":72,"performanceGrade":"C","recommendations":[{"level":"warning","title":"TTFB elevado","description":"Considerar CDN.","impact":"alto"}],"lighthouseEstimates":{"lcp":2.4,"fid":45,"cls":0.08,"fcp":1.2,"tti":3.8,"tbt":180}}`;
+  const prompt = `Eres un analizador de performance web experto. Analiza técnicamente el sitio: ${url}
+Genera datos técnicos REALISTAS y CONSISTENTES. Sé determinístico para el mismo dominio.
+Devuelve SOLO JSON válido con: domain, ip, ipv6, asn, isp, country, city, cdn, hosting, httpVersion, serverSoftware, ttfb, dnsResolution, tcpHandshake, tlsHandshake, firstByte, fullyLoaded, domContentLoaded, transferSize, resourceCount, compressionRatio, cacheHitRate, redirectCount, redirectChain, dnsChain, tls (version, cipher, certIssuer, certExpiry, certDaysLeft, hsts, ocspStapling, certTransparency), headers, techStack, waterfall, performanceScore, performanceGrade, recommendations, lighthouseEstimates.`;
 
   try {
     const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
@@ -225,18 +362,22 @@ Devuelve SOLO JSON válido, sin markdown, sin texto extra:
       model: 'llama-3.3-70b-versatile', temperature: 0, max_tokens: 3000,
       messages: [
         { role: 'system', content: 'Responde SOLO con JSON válido, sin markdown.' },
-        { role: 'user', content: perfPrompt }
+        { role: 'user', content: prompt }
       ]
     });
     const json = extractJSON(response.choices[0].message.content);
-    res.json({ success: true, data: json });
-  } catch (err) {
+    // Performance NO llama a incrementScan — va de la mano con auditoría
+    const updatedUser = auth.validateToken(req.userToken, { strict: false });
+    res.json({ success: true, data: json, status: updatedUser ? buildStatus(updatedUser) : null });
+  } catch(err) {
     console.error('/performance error:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
 
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Scanner corriendo en http://0.0.0.0:${PORT}`);
-  console.log(`GROQ_API_KEY: ${process.env.GROQ_API_KEY ? 'OK (' + process.env.GROQ_API_KEY.slice(0,8) + '...)' : 'MISSING'}`);
+  console.log(`\nScanner en http://localhost:${PORT}`);
+  console.log(`Admin:   http://localhost:${PORT}/admin`);
+  if (!canEmail()) console.warn('⚠ Gmail no configurado — emails desactivados');
+  if (!process.env.GOOGLE_CLIENT_ID) console.warn('⚠ Google OAuth no configurado — solo password');
 });

@@ -907,6 +907,17 @@ function updateScansBadge(used, max) {
 }
 
 async function runScan() {
+  // Verificar acceso antes de escanear
+  const _blockReason = window.getScanBlockReason ? window.getScanBlockReason() : null;
+  if (_blockReason) {
+    const eb = document.getElementById('errorBox');
+    const et = document.getElementById('errorText');
+    if (et) et.textContent = _blockReason;
+    else if (eb) eb.textContent = '⚠ ' + _blockReason;
+    if (eb) eb.classList.add('visible');
+    return;
+  }
+
   // Performance solo bloquea si el tiempo expiró — las consultas no aplican aquí
   const s = window._sessionStatus;
   if (s) {

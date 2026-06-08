@@ -1092,14 +1092,7 @@ document.getElementById('urlInput').addEventListener('keydown', e => {
   if (e.key === 'Enter') runScan();
 });
 
-// Restore shared URL from performance tab
-(function restoreSharedUrl() {
-  try {
-    const shared = localStorage.getItem('shellti_shared_url');
-    const input  = document.getElementById('urlInput');
-    if (shared && input && !input.value) input.value = shared;
-  } catch(e) {}
-})();
+
 
 function logout() {
   localStorage.removeItem('shellti_token');
