@@ -1,0 +1,404 @@
+{
+  "requests": [
+    {
+      "id": "1cd42fc7f643ab5d",
+      "name": "Felipe",
+      "company": "Felipe",
+      "email": "faldunate@gmail.com",
+      "reason": "dcdsddc",
+      "status": "approved",
+      "createdAt": "2026-06-08T16:38:31.224Z",
+      "approvedAt": "2026-06-08T16:43:43.647Z",
+      "expiresAt": "2026-06-08T17:43:43.647Z",
+      "accessToken": "039330a0a43742bd3dee0e692b49f2127d8cba9f45eed624",
+      "durationLabel": "1h",
+      "maxScans": null
+    },
+    {
+      "id": "ad4bb021a91a4ff2",
+      "name": "Felipe",
+      "company": "Felipe",
+      "email": "faldunate@gmail.com",
+      "reason": "da",
+      "status": "approved",
+      "createdAt": "2026-06-08T13:54:31.705Z",
+      "approvedAt": "2026-06-08T14:14:04.861Z",
+      "expiresAt": "2026-07-08T14:14:04.861Z",
+      "accessToken": "4b6c88262c01f5cd75d3438406e613dd269d09e1f73123fe",
+      "durationLabel": "30d",
+      "maxScans": null
+    },
+    {
+      "id": "95cf1e3633d5d869",
+      "name": "Felipe",
+      "company": "Felipe",
+      "email": "faldunate@gmail.com",
+      "reason": "dfsfd",
+      "status": "approved",
+      "createdAt": "2026-06-08T11:46:33.671Z",
+      "approvedAt": "2026-06-08T11:47:01.660Z",
+      "expiresAt": "2026-06-08T12:47:01.660Z",
+      "accessToken": "57dfd8c9d28fbef99ea5f00ef28de78c23d5f93af07c3185",
+      "durationLabel": "1h",
+      "maxScans": null
+    },
+    {
+      "id": "1532a954c7c31f12",
+      "name": "Felipe",
+      "company": "Felipe",
+      "email": "faldunate@gmail.com",
+      "reason": "dsdfsdf",
+      "status": "approved",
+      "createdAt": "2026-06-08T11:12:32.546Z",
+      "approvedAt": "2026-06-08T11:12:56.348Z",
+      "expiresAt": "2026-06-08T12:12:56.348Z",
+      "accessToken": "a4bcad6eef4d0a6ceaa4aec694c124bbacd92ab308a59218",
+      "durationLabel": "1h",
+      "maxScans": 1
+    },
+    {
+      "id": "b10800fa98a86adb",
+      "name": "felipe",
+      "company": "felipe",
+      "email": "faldunate@gmail.com",
+      "reason": "fdsfdf",
+      "status": "approved",
+      "createdAt": "2026-06-08T07:01:39.004Z",
+      "approvedAt": "2026-06-08T07:02:29.011Z",
+      "expiresAt": "2026-06-08T08:02:29.011Z",
+      "accessToken": "edb369d052ebaaa18a7d4a9bef9318fcfee4ab8faf3dd01d",
+      "durationLabel": "1h",
+      "maxScans": 1
+    },
+    {
+      "id": "fcfedd45bfb2612c",
+      "name": "FElipe",
+      "company": "FElipe",
+      "email": "faldunate@gmail.com",
+      "reason": "dfsd",
+      "status": "approved",
+      "createdAt": "2026-06-08T06:51:55.037Z",
+      "approvedAt": "2026-06-08T06:52:15.831Z",
+      "expiresAt": "2026-06-08T07:52:15.831Z",
+      "accessToken": "6b2ba69bb9ecb55edb23c26f0cce247e13757b637b54335c",
+      "durationLabel": "1h",
+      "maxScans": null
+    },
+    {
+      "id": "8c8f777ba047da37",
+      "name": "Felipe",
+      "company": "Felipe",
+      "email": "faldunate@gmail.com",
+      "reason": "fsdf",
+      "status": "approved",
+      "createdAt": "2026-06-08T06:49:53.326Z",
+      "approvedAt": "2026-06-08T06:50:19.540Z",
+      "expiresAt": "2026-06-08T07:50:19.540Z",
+      "accessToken": "8b6a8ef1fbc17a3c16c9f9fb6609f05b973ae8ec45b36398",
+      "durationLabel": "1h",
+      "maxScans": 1
+    },
+    {
+      "id": "6d5b9f77b9eea3f5",
+      "name": "Felipe",
+      "company": "Felipe",
+      "email": "faldunate@gmail.com",
+      "reason": "fsdff",
+      "status": "approved",
+      "createdAt": "2026-06-08T06:39:27.929Z",
+      "approvedAt": "2026-06-08T06:40:30.540Z",
+      "expiresAt": "2026-06-08T07:40:30.540Z",
+      "accessToken": "d045c9b7d6d02d7c999dee670279f1d0f6364a1e95af5554",
+      "durationLabel": "1h",
+      "maxScans": null
+    },
+    {
+      "id": "14768c6158c89b91",
+      "name": "Felipe",
+      "company": "Felipe",
+      "email": "faldunate@gmail.com",
+      "reason": "fsd",
+      "status": "approved",
+      "createdAt": "2026-06-08T06:33:57.836Z",
+      "approvedAt": "2026-06-08T06:36:05.655Z",
+      "expiresAt": "2026-06-08T07:36:05.655Z",
+      "accessToken": "e54c12b366fca0b6578f0768e9fe6255a1f1517769e495c0",
+      "durationLabel": "1h",
+      "maxScans": 1
+    },
+    {
+      "id": "e5f81a926276ca11",
+      "name": "Felipe",
+      "company": "Felipe",
+      "email": "faldunate@gmail.com",
+      "reason": "fdsf",
+      "status": "approved",
+      "createdAt": "2026-06-08T06:23:45.675Z",
+      "approvedAt": "2026-06-08T06:28:07.775Z",
+      "expiresAt": "2026-06-08T07:28:07.775Z",
+      "accessToken": "80e784e5c2945ea68c4633fd6f9af9c63af1bc98496e4646",
+      "durationLabel": "1h",
+      "maxScans": 1
+    },
+    {
+      "id": "dbb665c29cadbef8",
+      "name": "Felipe",
+      "company": "Ferlipe",
+      "email": "faldunate@gmail.com",
+      "reason": "dfsff",
+      "status": "approved",
+      "createdAt": "2026-06-08T06:19:47.142Z",
+      "approvedAt": "2026-06-08T06:28:19.988Z",
+      "expiresAt": "2026-06-08T07:28:19.988Z",
+      "accessToken": "e7f8c6e7b473eca8265dd17c3dca5b07deeb2b503a2fc64f",
+      "durationLabel": "1h",
+      "maxScans": 1
+    },
+    {
+      "id": "b5bdecff6555e793",
+      "name": "felipe",
+      "company": "felipe",
+      "email": "faldunate@gmail.com",
+      "reason": "csdcsd",
+      "status": "approved",
+      "createdAt": "2026-06-08T01:42:49.503Z",
+      "approvedAt": "2026-06-08T01:43:58.561Z",
+      "expiresAt": "2026-06-08T02:43:58.561Z",
+      "accessToken": "b164ad22166ceba1404c2bba83f1bb67575bf15faba89edf",
+      "durationLabel": "1h",
+      "maxScans": null
+    },
+    {
+      "id": "ce8ec3058162efd6",
+      "name": "Felipe",
+      "company": "Felipe",
+      "email": "faldunate@gmail.com",
+      "reason": "ffewdf",
+      "status": "approved",
+      "createdAt": "2026-06-08T00:19:12.930Z",
+      "approvedAt": "2026-06-08T00:19:49.272Z",
+      "expiresAt": "2026-06-08T01:19:49.272Z",
+      "accessToken": "72db0b35487fba323b9c167e8591f1e783080c281dd83c32",
+      "durationLabel": "1h",
+      "maxScans": 2
+    },
+    {
+      "id": "a95e161358776790",
+      "name": "felipe",
+      "company": "felipe",
+      "email": "faldunate@gmail.com",
+      "reason": "sfd",
+      "status": "approved",
+      "createdAt": "2026-06-07T21:41:53.323Z",
+      "approvedAt": "2026-06-07T21:42:28.067Z",
+      "expiresAt": "2026-06-07T22:42:28.067Z",
+      "accessToken": "1f8b634cd09f60d961357e53c155ec6a11eed1cef8bcef13",
+      "durationLabel": "1h",
+      "maxScans": 2
+    },
+    {
+      "id": "4ea59b460927d561",
+      "name": "Felipe",
+      "company": "Felipe Aldunate",
+      "email": "faldunate@gmail.com",
+      "reason": "sdas",
+      "status": "approved",
+      "createdAt": "2026-06-07T19:07:41.317Z",
+      "approvedAt": "2026-06-07T19:08:25.535Z",
+      "expiresAt": "2026-06-07T20:08:25.535Z",
+      "accessToken": "cb88c0a255edf7a3604a1eaa06a6c98fcbefdefb3bd3ed49",
+      "durationLabel": "1h",
+      "maxScans": 2
+    },
+    {
+      "id": "a2f31f0ad7368b81",
+      "name": "Felipe",
+      "company": "Felipe",
+      "email": "faldunate@gmail.com",
+      "reason": "dfadfa",
+      "status": "approved",
+      "createdAt": "2026-06-07T18:57:25.727Z",
+      "approvedAt": "2026-06-07T18:58:31.950Z",
+      "expiresAt": "2026-06-07T19:58:31.950Z",
+      "accessToken": "206f3e2cd8c09905cd49f44d1bbfde07884d9d8497b04641",
+      "durationLabel": "1h",
+      "maxScans": 2
+    },
+    {
+      "id": "75e14f51800072ce",
+      "name": "Felipe",
+      "company": "Felipe",
+      "email": "faldunate@gmail.com",
+      "reason": "csd",
+      "status": "approved",
+      "createdAt": "2026-06-07T13:50:31.916Z",
+      "approvedAt": "2026-06-07T13:50:57.892Z",
+      "expiresAt": "2026-06-07T14:50:57.892Z",
+      "accessToken": "6c76f3975816ef0679e637867f5a8b3adf9a285f28d2a281",
+      "durationLabel": "1h",
+      "maxScans": 2
+    },
+    {
+      "id": "27f25e03ef21a930",
+      "name": "Felipe",
+      "company": "Felipe",
+      "email": "faldunate@gmail.com",
+      "reason": "dfsd",
+      "status": "approved",
+      "createdAt": "2026-06-07T10:43:04.027Z",
+      "approvedAt": "2026-06-07T10:43:37.903Z",
+      "expiresAt": "2026-06-07T11:43:37.903Z",
+      "accessToken": "0dc3f72c03cde567650ac7ca3ab76af244eec11d25dadcc2",
+      "durationLabel": "1h",
+      "maxScans": 2
+    },
+    {
+      "id": "298ee88ac78cb38c",
+      "name": "Felipe",
+      "company": "Felipe",
+      "email": "faldunate@gmail.com",
+      "reason": "fdsdf",
+      "status": "approved",
+      "createdAt": "2026-06-07T10:27:15.564Z",
+      "approvedAt": "2026-06-07T10:27:51.420Z",
+      "expiresAt": "2026-06-07T11:27:51.420Z",
+      "accessToken": "fbf5fc240ddb58e224060c42cc399120a52674080be75d11",
+      "durationLabel": "1h",
+      "maxScans": 2
+    },
+    {
+      "id": "09b3d9c4eb3eeb66",
+      "name": "Felipe",
+      "company": "Felipe",
+      "email": "faldunate@gmail.com",
+      "reason": "das",
+      "status": "approved",
+      "createdAt": "2026-06-07T10:16:41.605Z",
+      "approvedAt": "2026-06-07T10:17:43.064Z",
+      "expiresAt": "2026-06-07T11:17:43.064Z",
+      "accessToken": "72b3214b0c2b54ea9ed66c9dec885eca5983a1e8f427ea1f",
+      "durationLabel": "1h"
+    },
+    {
+      "id": "9b7a2c5abf72454e",
+      "name": "Felipe",
+      "company": "Felipe",
+      "email": "faldunate@gmail.com",
+      "reason": "fdzfs",
+      "status": "approved",
+      "createdAt": "2026-06-07T10:09:36.754Z",
+      "approvedAt": "2026-06-07T10:11:54.018Z",
+      "expiresAt": "2026-06-07T11:11:54.018Z",
+      "accessToken": "2d4e216b94c339f3728386f574230ac18f3dc7f9f7619254",
+      "durationLabel": "1h"
+    },
+    {
+      "id": "63805812221dcb84",
+      "name": "Felipe",
+      "company": "Felipe",
+      "email": "faldunate@gmail.com",
+      "reason": "dfsgdsg",
+      "status": "approved",
+      "createdAt": "2026-06-07T10:05:25.713Z",
+      "approvedAt": "2026-06-07T10:06:06.212Z",
+      "expiresAt": "2026-06-07T11:06:06.212Z",
+      "accessToken": "0df0a767ae3b3fe7262f386e3171bc8119acd065a22fcd1f",
+      "durationLabel": "1h"
+    }
+  ],
+  "users": [
+    {
+      "email": "faldunate@gmail.com",
+      "name": "Felipe",
+      "company": "Felipe",
+      "token": "039330a0a43742bd3dee0e692b49f2127d8cba9f45eed624",
+      "expiresAt": "2026-06-08T17:43:43.647Z",
+      "active": true,
+      "createdAt": "2026-06-07T10:06:06.212Z",
+      "maxScans": null,
+      "scansUsed": 0
+    }
+  ],
+  "sessions": [
+    {
+      "token": "04af6bbf637c75b59950de75f20830e0cd89fe62e20118e110674ee082f73cb5",
+      "createdAt": "2026-06-07T10:06:02.731Z"
+    },
+    {
+      "token": "3c685eda7f6914e9405389a2fe9062b689dd29b396ecb9ea57d0e6dc4757c924",
+      "createdAt": "2026-06-07T10:09:59.582Z"
+    },
+    {
+      "token": "4b5c31d9800ef649ea3942b28ffd39466f30dd3f890d867f1b771fe542dc9ba4",
+      "createdAt": "2026-06-07T10:17:38.973Z"
+    },
+    {
+      "token": "46d262f4a22ed513f2fbce0a83c7bdcced363bf33f00a40e82c971ea96ba5884",
+      "createdAt": "2026-06-07T10:27:33.552Z"
+    },
+    {
+      "token": "25832bffdb2f9cc882fdbb9df6a4f789ded762c30690de87bbb61558fd9e1231",
+      "createdAt": "2026-06-07T10:43:31.576Z"
+    },
+    {
+      "token": "1938428e49f4d1e01bd9923af34c5fefa2eace65e38abd46678b6462acda0ee6",
+      "createdAt": "2026-06-07T13:50:48.810Z"
+    },
+    {
+      "token": "20c12d405411dc2a4ac368105c195060471137d3a9c31734fa60deb1080377d5",
+      "createdAt": "2026-06-07T18:58:27.383Z"
+    },
+    {
+      "token": "4fb241053dec188d69ce60fe624f2a80d6a76c012e5895ebaf8af6c8f28f4a73",
+      "createdAt": "2026-06-07T19:08:20.341Z"
+    },
+    {
+      "token": "7a3b6d7e15728f6a442f5a3fd4a29fb3aeb933f495c9a892c462941c6a88d856",
+      "createdAt": "2026-06-07T21:42:22.991Z"
+    },
+    {
+      "token": "9d4af8b4a0d1822f3ea9c7c936125c0153252b0b7aa8e479ac2c460a424fbfe4",
+      "createdAt": "2026-06-08T00:17:15.138Z"
+    },
+    {
+      "token": "c965eeeb40d7e566ec032f409090028c65ec08f1bbb6b5a480175a6898bab11b",
+      "createdAt": "2026-06-08T00:19:41.961Z"
+    },
+    {
+      "token": "0163be6e1ac53704a09cde9e9dbc009cbd49c228f41a023c34b7a7cc2196a615",
+      "createdAt": "2026-06-08T01:43:55.682Z"
+    },
+    {
+      "token": "f1581f20d55dbf329c9c0d0241cf829410d9eda8bc8f21784e9a375266ca178d",
+      "createdAt": "2026-06-08T06:27:53.221Z"
+    },
+    {
+      "token": "1258207ab69962285ee164c6bc4ca41da040653e0bb77f6b6eb92dd945cd6ce9",
+      "createdAt": "2026-06-08T06:35:59.451Z"
+    },
+    {
+      "token": "003c35687ed0762a8c1b7bff3b75585f8a3982cf86debdeeb723ff3466f468af",
+      "createdAt": "2026-06-08T06:50:14.554Z"
+    },
+    {
+      "token": "46c32922e5cdfa0e5878365ec011c7e81806df0bffe2899385223cec7d0dbbae",
+      "createdAt": "2026-06-08T06:52:12.262Z"
+    },
+    {
+      "token": "acc19c28998bd4984fb1337f27235f435493b727d7569c85d63658a942d2d4cc",
+      "createdAt": "2026-06-08T07:02:23.696Z"
+    },
+    {
+      "token": "64cd85d201f0241c7c2ec8b051c23565acebb38ea5c3adcf60db8232bae2c10e",
+      "createdAt": "2026-06-08T11:12:50.633Z"
+    },
+    {
+      "token": "88f223b1dc17b04a93115f376d91ccfbbb3498f9b5991d470a45c84bbe585cf4",
+      "createdAt": "2026-06-08T11:46:57.165Z"
+    },
+    {
+      "token": "814406dc830678f3531e39d62681cfacce26e40f32f33239d74a2273a767d2ee",
+      "createdAt": "2026-06-08T16:43:36.955Z"
+    }
+  ]
+}
