@@ -166,14 +166,14 @@ app.get('/', (req, res) => {
   const token = req.query.token;
   if (token) {
     const user = auth.validateToken(token, { strict: false });
-    if (user) return res.redirect('/dashboard.html?token=' + token);
+    if (user) return res.redirect('https://shellti.com/dashboard.html?token=' + token);
   }
-  res.sendFile(path.join(PUBLIC_DIR, 'index.html'));
+  res.redirect('https://shellti.com/scanner-acceso.html');
 });
-app.get('/dashboard.html',   (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'dashboard.html')));
-app.get('/performance.html', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'performance.html')));
-app.get('/admin',            (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'admin.html')));
-app.get('/admin.html',       (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'admin.html')));
+app.get('/dashboard.html',   (req, res) => res.redirect('https://shellti.com/dashboard.html' + (req.query.token ? '?token=' + req.query.token : '')));
+app.get('/performance.html', (req, res) => res.redirect('https://shellti.com/performance.html'));
+app.get('/admin',            (req, res) => res.redirect('https://shellti.com/admin.html'));
+app.get('/admin.html',       (req, res) => res.redirect('https://shellti.com/admin.html'));
 app.use(express.static(PUBLIC_DIR));
 
 // ── Google OAuth routes ───────────────────────────────────────────────────────
@@ -195,7 +195,7 @@ app.get('/auth/google/status', (req, res) => {
 });
 
 app.get('/auth/logout', (req, res) => {
-  req.logout(() => res.redirect('/'));
+  req.logout(() => res.redirect('https://shellti.com/admin.html'));
 });
 
 // ── Auth usuario ──────────────────────────────────────────────────────────────
