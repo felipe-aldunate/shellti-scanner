@@ -3,7 +3,7 @@ const crypto = require('crypto');
 const admin  = require('firebase-admin');
 
 // ── Firebase init ─────────────────────────────────────────────────────────────
-if (!admin.apps.length) {
+if (!admin.apps || !admin.apps.length) {
   admin.initializeApp({
     credential: admin.credential.cert({
       projectId:   process.env.FIREBASE_PROJECT_ID,
