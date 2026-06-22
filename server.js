@@ -118,7 +118,7 @@ function getAccessUrl(token, resources) {
     if (resources.includes('diagnostico')) return `${shellti}/diagnostico.html?token=${token}`;
   }
   // Sin recursos de shellti o solo scanner → dashboard del scanner
-  return `${process.env.BASE_URL || 'https://web-production-372660.up.railway.app'}/?token=${token}`;
+  return `https://shellti.com/dashboard.html?token=${token}`;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -218,7 +218,7 @@ app.post('/auth/request', async (req, res) => {
         <p><strong>${name}</strong> (${company}) solicita acceso.</p>
         <p>Email: <a href="mailto:${email}">${email}</a></p>
         <p>Motivo: ${reason}</p>
-        <p><a href="${getBase(req)}/admin" style="background:#00D4FF;color:#020617;padding:10px 24px;text-decoration:none;font-weight:700;display:inline-block;margin-top:8px">IR AL ADMIN →</a></p>
+        <p><a href="https://shellti.com/admin.html" style="background:#00D4FF;color:#020617;padding:10px 24px;text-decoration:none;font-weight:700;display:inline-block;margin-top:8px">IR AL ADMIN →</a></p>
       </div>
     </div>`
   );
