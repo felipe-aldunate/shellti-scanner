@@ -152,7 +152,7 @@ function buildStatus(user) {
 }
 
 // ── Middleware admin ──────────────────────────────────────────────────────────
-function requireAdmin(req, res, next) {
+async function requireAdmin(req, res, next) {
   if (req.isAuthenticated()) return next();
   const token = req.headers['x-admin-token'];
   if (token && await auth.validateAdminSession(token)) return next();
@@ -338,7 +338,7 @@ app.post('/admin/update-resources', requireAdmin, (req, res) => {
 });
 
 // ── Verificar acceso para scan ────────────────────────────────────────────────
-function checkScanAccess(req, res, next) {
+async function checkScanAccess(req, res, next) {
   const token = req.headers['x-user-token'];
   if (!token) return res.status(401).json({ error: 'Token requerido' });
   const user = await auth.validateToken(token, { strict: false });
