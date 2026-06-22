@@ -268,7 +268,7 @@ function showAdminPanel(googleUser) {
     window.history.replaceState({}, '', '/admin');
   }
   try {
-    const res  = await fetch('/auth/google/status');
+    const res  = await fetch('https://web-production-372660.up.railway.app/auth/google/status');
     const data = await res.json();
     if (data.authenticated) {
       if (!adminToken && data.adminToken) {
@@ -286,7 +286,7 @@ async function doLogin() {
   const pass = document.getElementById('adminPass').value;
   const err  = document.getElementById('loginErr');
   try {
-    const res  = await fetch('/admin/login', {
+    const res  = await fetch('https://web-production-372660.up.railway.app/admin/login', {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
       body: JSON.stringify({ password: pass })
@@ -320,7 +320,7 @@ function switchTab(tab) {
 // ── LOAD ─────────────────────────────────────────────────────────────────────
 async function loadAll() {
   try {
-    const res  = await fetch('/admin/requests', {
+    const res  = await fetch('https://web-production-372660.up.railway.app/admin/requests', {
       headers: {'x-admin-token': adminToken}
     });
     if (res.status === 401) { doLogout(); return; }
@@ -332,7 +332,7 @@ async function loadAll() {
 
 async function loadUsers() {
   try {
-    const res  = await fetch('/admin/users', {
+    const res  = await fetch('https://web-production-372660.up.railway.app/admin/users', {
       headers: {'x-admin-token': adminToken}
     });
     const data = await res.json();
@@ -492,7 +492,7 @@ async function approve(id) {
       const el = document.getElementById('res-' + id + '-' + r);
       return el && el.checked;
     });
-  const res  = await fetch(`/admin/approve/${id}`, {
+  const res  = await fetch(`https://web-production-372660.up.railway.app/admin/approve/${id}`, {
       method: 'POST',
       headers: {'Content-Type':'application/json','x-admin-token':adminToken},
       body: JSON.stringify({ durationMs: dur.ms, durationLabel: dur.label, maxScans, resources })
@@ -510,7 +510,7 @@ async function approve(id) {
 async function reject(id) {
   if (!confirm('¿Rechazar esta solicitud?')) return;
   try {
-    const res  = await fetch(`/admin/reject/${id}`, {
+    const res  = await fetch(`https://web-production-372660.up.railway.app/admin/reject/${id}`, {
       method: 'POST',
       headers: {'x-admin-token': adminToken}
     });
@@ -527,7 +527,7 @@ async function saveResources(email, emailKey) {
     return el && el.checked;
   });
   try {
-    const res = await fetch('/admin/update-resources', {
+    const res = await fetch('https://web-production-372660.up.railway.app/admin/update-resources', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-admin-token': adminToken },
       body: JSON.stringify({ email, resources })
@@ -543,7 +543,7 @@ async function saveResources(email, emailKey) {
 async function revoke(email) {
   if (!confirm(`¿Revocar acceso de ${email}?`)) return;
   try {
-    const res  = await fetch('/admin/revoke', {
+    const res  = await fetch('https://web-production-372660.up.railway.app/admin/revoke', {
       method: 'POST',
       headers: {'Content-Type':'application/json','x-admin-token':adminToken},
       body: JSON.stringify({ email })

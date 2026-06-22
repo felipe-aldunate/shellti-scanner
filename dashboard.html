@@ -927,7 +927,7 @@ function getToken() {
   if (!token) { window.location.href = '/'; return; }
   // Validación inicial estricta — solo redirige si el token no existe en el sistema
   // El status-widget.js maneja el cronómetro y badge de consultas
-  fetch('/auth/validate', {
+  fetch('https://web-production-372660.up.railway.app/auth/validate', {
     method: 'POST', headers: {'Content-Type':'application/json'},
     body: JSON.stringify({ token, strict: false })
   }).then(r=>r.json()).then(d=>{
@@ -1051,7 +1051,7 @@ async function runScan() {
   const t6 = setTimeout(() => setStep(4, 95, 'Construyendo informe...', 'Casi listo...'), 50000);
 
   try {
-    const fetchPromise = fetch('/scan', {
+    const fetchPromise = fetch('https://web-production-372660.up.railway.app/scan', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-user-token': getToken() },
       body: JSON.stringify({ url }),
@@ -1092,14 +1092,7 @@ document.getElementById('urlInput').addEventListener('keydown', e => {
   if (e.key === 'Enter') runScan();
 });
 
-// Restore shared URL from performance tab
-(function restoreSharedUrl() {
-  try {
-    const shared = localStorage.getItem('shellti_shared_url');
-    const input  = document.getElementById('urlInput');
-    if (shared && input && !input.value) input.value = shared;
-  } catch(e) {}
-})();
+
 
 function logout() {
   localStorage.removeItem('shellti_token');

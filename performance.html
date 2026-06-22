@@ -423,7 +423,7 @@ function barColor(ms, okMs, warnMs) {
 
 // ─── CRAWL via proxy /scan (mismo que dashboard) ─────────────────────────────
 async function crawlViaAI(url) {
-  const res = await fetch('/performance', {
+  const res = await fetch('https://web-production-372660.up.railway.app/performance', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-user-token': getToken() },
     body: JSON.stringify({ url })
@@ -841,7 +841,7 @@ function getToken() {
 (function checkAuth() {
   const token = getToken();
   if (!token) { window.location.href = '/'; return; }
-  fetch('/auth/validate', {
+  fetch('https://web-production-372660.up.railway.app/auth/validate', {
     method: 'POST', headers: {'Content-Type':'application/json'},
     body: JSON.stringify({ token, strict: false })
   }).then(r=>r.json()).then(d=>{
