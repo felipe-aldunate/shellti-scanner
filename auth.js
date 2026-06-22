@@ -43,7 +43,7 @@ function createRequest({ name, company, email, reason }) {
 function getRequests() { return db.requests; }
 function getRequest(id) { return db.requests.find(r => r.id === id); }
 
-function approveRequest(id, durationMs, durationLabel, maxScans) {
+function approveRequest(id, durationMs, durationLabel, maxScans, resources) {
   const req = getRequest(id);
   if (!req) return null;
   const token = generateToken(24);
@@ -54,6 +54,7 @@ function approveRequest(id, durationMs, durationLabel, maxScans) {
   req.accessToken   = token;
   req.durationLabel = durationLabel;
   req.maxScans      = maxScans || null;
+  req.resources     = resources || [];
 
   const existing = db.users.find(u => u.email === req.email);
   if (existing) {
@@ -62,13 +63,15 @@ function approveRequest(id, durationMs, durationLabel, maxScans) {
     existing.active     = true;
     existing.maxScans   = maxScans || null;
     existing.scansUsed  = 0;
+    existing.resources  = resources || [];
   } else {
     db.users.push({
       email: req.email, name: req.name, company: req.company,
       token, expiresAt: req.expiresAt, active: true,
       createdAt: now.toISOString(),
       maxScans: maxScans || null,
-      scansUsed: 0
+      scansUsed: 0,
+      resources: resources || []
     });
   }
   saveDB(db);
@@ -102,7 +105,8 @@ function validateToken(token, { strict = true } = {}) {
     ...user,
     expired,
     scansDone,
-    canScan: !expired && !scansDone
+    canScan: !expired && !scansDone,
+    resources: user.resources || []
   };
 }
 
@@ -131,7 +135,16 @@ function validateAdminSession(token) {
 
 function getUsers() { return db.users; }
 
+function updateUserResources(email, resources) {
+  db = loadDB();
+  const user = db.users.find(u => u.email === email);
+  if (!user) return null;
+  user.resources = resources || [];
+  saveDB(db);
+  return user;
+}
+
 module.exports = {
   createRequest, getRequests, getRequest, approveRequest,
-  revokeUser, validateToken, incrementScan, createAdminSession, validateAdminSession, getUsers
+  revokeUser, validateToken, incrementScan, createAdminSession, validateAdminSession, getUsers, updateUserResources
 };
