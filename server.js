@@ -20,19 +20,17 @@ console.log('[env] GMAIL_USER:', process.env.GMAIL_USER || 'NO CONFIGURADO');
 console.log('[env] GMAIL_APP_PASSWORD:', process.env.GMAIL_APP_PASSWORD ? 'OK' : 'NO CONFIGURADO');
 console.log('[env] GROQ_API_KEY:', process.env.GROQ_API_KEY ? 'OK' : 'NO CONFIGURADO');
 console.log('[env] GOOGLE_CLIENT_ID:', process.env.GOOGLE_CLIENT_ID ? 'OK' : 'NO CONFIGURADO');
-console.log('[env] BASE_URL:', process.env.BASE_URL || 'http://localhost:3000');
+console.log('[env] BASE_URL:', process.env.BASE_URL || 'NO CONFIGURADO');
 
+// ── CORS ──────────────────────────────────────────────────────────────────────
 const ALLOWED_ORIGINS = [
   'https://shellti.com',
-  'https://www.shellti.com',
-  'http://localhost:3000',
-  'http://localhost:5500',
-  'http://127.0.0.1:5500'
+  'https://www.shellti.com'
 ];
 
 app.use(cors({
   origin: function(origin, callback) {
-    // Permitir requests sin origin (Postman, Railway health checks, same-origin)
+    // Permitir requests sin origin (Railway health checks, same-origin del scanner)
     if (!origin) return callback(null, true);
     if (ALLOWED_ORIGINS.includes(origin)) return callback(null, true);
     console.warn('[cors] Bloqueado origin:', origin);
@@ -42,6 +40,7 @@ app.use(cors({
   methods: ['GET', 'POST', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'x-user-token', 'x-admin-token']
 }));
+
 app.use(express.json());
 app.use(session({
   secret: process.env.SESSION_SECRET || 'shellti-secret-2024',
@@ -57,7 +56,7 @@ if (process.env.GOOGLE_CLIENT_ID) {
   passport.use(new GoogleStrategy({
       clientID:     process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      callbackURL:  `${process.env.BASE_URL || 'http://localhost:3000'}/auth/google/callback`
+      callbackURL:  `${process.env.BASE_URL}/auth/google/callback`
     },
     (accessToken, refreshToken, profile, done) => {
       const email = profile.emails?.[0]?.value;
@@ -75,16 +74,12 @@ function canEmail() {
 }
 
 function getMailer() {
-  // App Password puede venir con espacios (ej: "nfrm rzdd eixl vsru") — removerlos
   const pass = (process.env.GMAIL_APP_PASSWORD || '').replace(/\s+/g, '');
   return nodemailer.createTransport({
     host: 'smtp.gmail.com',
     port: 465,
     secure: true,
-    auth: {
-      user: process.env.GMAIL_USER,
-      pass
-    }
+    auth: { user: process.env.GMAIL_USER, pass }
   });
 }
 
@@ -101,7 +96,6 @@ async function sendMail(to, subject, html) {
     console.log('[mail] Enviado a:', to, '| MessageId:', info.messageId);
   } catch(e) {
     console.error('[mail] ERROR:', e.message);
-    // Log detallado para debug
     console.error('[mail] SMTP config:', {
       user: process.env.GMAIL_USER,
       passLength: process.env.GMAIL_APP_PASSWORD?.length
@@ -131,10 +125,14 @@ function buildStatus(user) {
     ? Math.max(0, user.maxScans - (user.scansUsed || 0))
     : null;
   return {
-    name: user.name, email: user.email, expiresAt: user.expiresAt,
-    maxScans: user.maxScans ?? null, scansUsed: user.scansUsed || 0,
-    scansLeft, expired,
-    canScan: !expired && (scansLeft === null || scansLeft > 0),
+    name:      user.name,
+    email:     user.email,
+    expiresAt: user.expiresAt,
+    maxScans:  user.maxScans ?? null,
+    scansUsed: user.scansUsed || 0,
+    scansLeft,
+    expired,
+    canScan:   !expired && (scansLeft === null || scansLeft > 0),
     resources: user.resources || []
   };
 }
@@ -201,23 +199,17 @@ app.post('/auth/request', async (req, res) => {
     `<div style="font-family:Arial,sans-serif;max-width:560px">
       <div style="background:#020617;padding:20px;border-bottom:3px solid #00D4FF">
         <h2 style="color:#00D4FF;margin:0">ShellTI Scanner</h2>
-        <p style="color:#94A3B8;margin:4px 0 0;font-size:12px">Nueva solicitud de acceso</p>
       </div>
       <div style="padding:20px;background:#f8fafc;border:1px solid #e2e8f0;border-top:none">
-        <table style="width:100%;font-size:14px;border-collapse:collapse">
-          <tr><td style="padding:5px 0;color:#64748b;width:80px">Nombre</td><td style="font-weight:600">${name}</td></tr>
-          <tr><td style="padding:5px 0;color:#64748b">Empresa</td><td style="font-weight:600">${company}</td></tr>
-          <tr><td style="padding:5px 0;color:#64748b">Email</td><td style="color:#0284c7">${email}</td></tr>
-          <tr><td style="padding:5px 0;color:#64748b;vertical-align:top">Motivo</td><td style="font-style:italic">${reason}</td></tr>
-        </table>
-        <div style="margin-top:20px;text-align:center">
-          <a href="${getBase(req)}/admin" style="background:#00D4FF;color:#020617;padding:10px 24px;text-decoration:none;font-weight:700;display:inline-block">ABRIR PANEL ADMIN →</a>
-        </div>
+        <p><strong>${name}</strong> (${company}) solicita acceso.</p>
+        <p>Email: <a href="mailto:${email}">${email}</a></p>
+        <p>Motivo: ${reason}</p>
+        <p><a href="${getBase(req)}/admin" style="background:#00D4FF;color:#020617;padding:10px 24px;text-decoration:none;font-weight:700;display:inline-block;margin-top:8px">IR AL ADMIN →</a></p>
       </div>
     </div>`
   );
 
-  res.json({ success: true });
+  res.json({ id: r.id, success: true });
 });
 
 app.post('/auth/validate', (req, res) => {
@@ -239,35 +231,23 @@ app.get('/admin/requests', requireAdmin, (req, res) => {
   res.json({ requests: auth.getRequests(), users: auth.getUsers() });
 });
 
-
-app.post('/admin/update-resources', requireAdmin, (req, res) => {
-  const { email, resources } = req.body;
-  if (!email) return res.status(400).json({ error: 'email requerido' });
-  const user = auth.updateUserResources(email, resources || []);
-  if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
-  console.log(`[admin] Recursos actualizados para ${email}: ${(resources||[]).join(', ')}`);
-  res.json({ success: true, resources: user.resources });
-});
-
 app.get('/admin/users', requireAdmin, (req, res) => {
   res.json({ users: auth.getUsers() });
 });
 
 app.post('/admin/approve/:id', requireAdmin, async (req, res) => {
-  const { durationMs, durationLabel, maxScans, modules, domainRestricted, website } = req.body;
+  const { durationMs, durationLabel, maxScans, resources } = req.body;
   if (!durationMs) return res.status(400).json({ error: 'Duración requerida' });
 
-  const resources = Array.isArray(req.body.resources) ? req.body.resources : [];
-  const r = auth.approveRequest(req.params.id, durationMs, durationLabel, maxScans ? parseInt(maxScans) : null, resources);
+  const resourceList = Array.isArray(resources) ? resources : [];
+  const r = auth.approveRequest(
+    req.params.id, durationMs, durationLabel,
+    maxScans ? parseInt(maxScans) : null,
+    resourceList
+  );
   if (!r) return res.status(404).json({ error: 'Solicitud no encontrada' });
 
-  // El frontend manda módulos / restricción de dominio / sitio al aprobar —
-  // se asignan directo sobre el usuario recién creado (mismo patrón que /admin/extend-user)
-  if (modules) r.modules = modules;
-  if (website) r.website = website;
-  if (domainRestricted !== undefined) r.domainRestricted = !!domainRestricted;
-
-  console.log(`[admin] Aprobado: ${r.email} por ${durationLabel}${maxScans ? ` · ${maxScans} consultas` : ''}`);
+  console.log(`[admin] Aprobado: ${r.email} por ${durationLabel}${maxScans ? ` · ${maxScans} consultas` : ''} · recursos: ${resourceList.join(',') || 'ninguno'}`);
 
   const accessUrl = `${getBase(req)}/?token=${r.accessToken}`;
   const expires   = new Date(r.expiresAt).toLocaleString('es-CL', {
@@ -293,12 +273,12 @@ app.post('/admin/approve/:id', requireAdmin, async (req, res) => {
           <p style="margin:4px 0 0;font-weight:700;font-size:15px">${expires}</p>
         </div>
         <div style="text-align:center;margin:20px 0">
-          <a href="${accessUrl}" style="background:#00D4FF;color:#020617;padding:14px 36px;text-decoration:none;font-weight:700;font-size:14px;display:inline-block">ACCEDER AL SCANNER →</a>
+          <a href="${accessUrl}" style="background:#00D4FF;color:#020617;padding:14px 36px;text-decoration:none;font-weight:700;font-size:14px;display:inline-block">ACCEDER →</a>
         </div>
         <p style="font-size:11px;color:#94a3b8;text-align:center;word-break:break-all">
           <a href="${accessUrl}" style="color:#0284c7">${accessUrl}</a>
         </p>
-        <p style="font-size:11px;color:#e05a5a;text-align:center">⚠ Enlace personal e intransferible.</p>
+        <p style="font-size:11px;color:#e05a5a;text-align:center">Enlace personal e intransferible.</p>
       </div>
     </div>`
   );
@@ -317,14 +297,12 @@ app.post('/admin/reject/:id', requireAdmin, async (req, res) => {
 });
 
 app.post('/admin/extend-user', requireAdmin, (req, res) => {
-  const { email, durationMs, durationLabel, maxScans, modules, domainRestricted } = req.body;
+  const { email, durationMs, durationLabel, maxScans } = req.body;
   if (!email || !durationMs) return res.status(400).json({ error: 'email y durationMs requeridos' });
   const user = auth.getUsers().find(u => u.email === email);
   if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
   user.expiresAt = new Date(Date.now() + Number(durationMs)).toISOString();
   if (maxScans != null) { user.maxScans = parseInt(maxScans); user.scansUsed = 0; }
-  if (modules) user.modules = modules;
-  if (domainRestricted !== undefined) user.domainRestricted = domainRestricted;
   console.log(`[admin] Acceso extendido: ${email} por ${durationLabel}`);
   res.json({ success: true });
 });
@@ -333,6 +311,15 @@ app.post('/admin/revoke', requireAdmin, (req, res) => {
   const user = auth.revokeUser(req.body.email);
   if (!user) return res.status(404).json({ error: 'No encontrado' });
   res.json({ success: true });
+});
+
+app.post('/admin/update-resources', requireAdmin, (req, res) => {
+  const { email, resources } = req.body;
+  if (!email) return res.status(400).json({ error: 'email requerido' });
+  const user = auth.updateUserResources(email, Array.isArray(resources) ? resources : []);
+  if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
+  console.log(`[admin] Recursos actualizados: ${email} → ${(user.resources||[]).join(',')}`);
+  res.json({ success: true, resources: user.resources });
 });
 
 // ── Verificar acceso para scan ────────────────────────────────────────────────
@@ -363,13 +350,11 @@ app.post('/scan', checkScanAccess, async (req, res) => {
     const cached = scanCache.get(domain);
     if (cached && (Date.now() - cached.ts) < CACHE_TTL) {
       console.log(`[/scan] Cache hit: ${domain}`);
-      // Igual contar la consulta aunque sea caché
       auth.incrementScan(req.userToken);
       const updatedUser = auth.validateToken(req.userToken, { strict: false });
       return res.json({ success: true, data: cached.data, crawlerData: cached.crawlerData, fromCache: true, status: updatedUser ? buildStatus(updatedUser) : null });
     }
 
-    // Contar ANTES para reservar la consulta
     auth.incrementScan(req.userToken);
 
     const crawlerData = await scanWebsite(url);
@@ -416,7 +401,6 @@ Devuelve SOLO JSON válido con: domain, ip, ipv6, asn, isp, country, city, cdn, 
       ]
     });
     const json = extractJSON(response.choices[0].message.content);
-    // Performance NO llama a incrementScan — va de la mano con auditoría
     const updatedUser = auth.validateToken(req.userToken, { strict: false });
     res.json({ success: true, data: json, status: updatedUser ? buildStatus(updatedUser) : null });
   } catch(err) {
@@ -426,8 +410,8 @@ Devuelve SOLO JSON válido con: domain, ip, ipv6, asn, isp, country, city, cdn, 
 });
 
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`\nScanner en http://localhost:${PORT}`);
-  console.log(`Admin:   http://localhost:${PORT}/admin`);
-  if (!canEmail()) console.warn('⚠ Gmail no configurado — emails desactivados');
-  if (!process.env.GOOGLE_CLIENT_ID) console.warn('⚠ Google OAuth no configurado — solo password');
+  console.log(`\nShellTI Scanner corriendo en puerto ${PORT}`);
+  console.log(`Admin: ${process.env.BASE_URL || 'http://localhost:' + PORT}/admin`);
+  if (!canEmail()) console.warn('Gmail no configurado — emails desactivados');
+  if (!process.env.GOOGLE_CLIENT_ID) console.warn('Google OAuth no configurado');
 });
