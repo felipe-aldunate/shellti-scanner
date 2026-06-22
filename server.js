@@ -155,7 +155,7 @@ function buildStatus(user) {
 function requireAdmin(req, res, next) {
   if (req.isAuthenticated()) return next();
   const token = req.headers['x-admin-token'];
-  if (token && auth.validateAdminSession(token)) return next();
+  if (token && await auth.validateAdminSession(token)) return next();
   res.status(401).json({ error: 'No autorizado' });
 }
 
@@ -165,15 +165,15 @@ const PUBLIC_DIR = process.env.RAILWAY_ENVIRONMENT ? '/app' : __dirname;
 app.get('/', (req, res) => {
   const token = req.query.token;
   if (token) {
-    const user = auth.validateToken(token, { strict: false });
-    if (user) return res.redirect('https://shellti.com/dashboard.html?token=' + token);
+    const user = await auth.validateToken(token, { strict: false });
+    if (user) return res.redirect('/dashboard.html?token=' + token);
   }
-  res.redirect('https://shellti.com/scanner-acceso.html');
+  res.sendFile(path.join(PUBLIC_DIR, 'index.html'));
 });
-app.get('/dashboard.html',   (req, res) => res.redirect('https://shellti.com/dashboard.html' + (req.query.token ? '?token=' + req.query.token : '')));
-app.get('/performance.html', (req, res) => res.redirect('https://shellti.com/performance.html'));
-app.get('/admin',            (req, res) => res.redirect('https://shellti.com/admin.html'));
-app.get('/admin.html',       (req, res) => res.redirect('https://shellti.com/admin.html'));
+app.get('/dashboard.html',   (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'dashboard.html')));
+app.get('/performance.html', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'performance.html')));
+app.get('/admin',            (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'admin.html')));
+app.get('/admin.html',       (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'admin.html')));
 app.use(express.static(PUBLIC_DIR));
 
 // ── Google OAuth routes ───────────────────────────────────────────────────────
@@ -195,7 +195,7 @@ app.get('/auth/google/status', (req, res) => {
 });
 
 app.get('/auth/logout', (req, res) => {
-  req.logout(() => res.redirect('https://shellti.com/admin.html'));
+  req.logout(() => res.redirect('/'));
 });
 
 // ── Auth usuario ──────────────────────────────────────────────────────────────
@@ -204,7 +204,7 @@ app.post('/auth/request', async (req, res) => {
   if (!name || !company || !email || !reason)
     return res.status(400).json({ error: 'Todos los campos son requeridos' });
 
-  const r = auth.createRequest({ name, company, email, reason });
+  const r = await auth.createRequest({ name, company, email, reason });
   console.log(`[auth] Nueva solicitud: ${name} <${email}>`);
 
   await sendMail(
@@ -226,9 +226,9 @@ app.post('/auth/request', async (req, res) => {
   res.json({ id: r.id, success: true });
 });
 
-app.post('/auth/validate', (req, res) => {
+app.post('/auth/validate', async (req, res) => {
   const { token } = req.body;
-  const user = auth.validateToken(token, { strict: false });
+  const user = await auth.validateToken(token, { strict: false });
   if (!user) return res.json({ valid: false });
   res.json({ valid: true, ...buildStatus(user) });
 });
@@ -241,12 +241,12 @@ app.post('/admin/login', (req, res) => {
   res.json({ token: auth.createAdminSession() });
 });
 
-app.get('/admin/requests', requireAdmin, (req, res) => {
-  res.json({ requests: auth.getRequests(), users: auth.getUsers() });
+app.get('/admin/requests', requireAdmin, async (req, res) => {
+  res.json({ requests: await auth.getRequests(), users: await auth.getUsers() });
 });
 
-app.get('/admin/users', requireAdmin, (req, res) => {
-  res.json({ users: auth.getUsers() });
+app.get('/admin/users', requireAdmin, async (req, res) => {
+  res.json({ users: await auth.getUsers() });
 });
 
 app.post('/admin/approve/:id', requireAdmin, async (req, res) => {
@@ -254,7 +254,7 @@ app.post('/admin/approve/:id', requireAdmin, async (req, res) => {
   if (!durationMs) return res.status(400).json({ error: 'Duración requerida' });
 
   const resourceList = Array.isArray(resources) ? resources : [];
-  const r = auth.approveRequest(
+  const r = await auth.approveRequest(
     req.params.id, durationMs, durationLabel,
     maxScans ? parseInt(maxScans) : null,
     resourceList
@@ -301,7 +301,7 @@ app.post('/admin/approve/:id', requireAdmin, async (req, res) => {
 });
 
 app.post('/admin/reject/:id', requireAdmin, async (req, res) => {
-  const r = auth.getRequest(req.params.id);
+  const r = await auth.getRequest(req.params.id);
   if (!r) return res.status(404).json({ error: 'No encontrada' });
   r.status = 'rejected';
   await sendMail(r.email, '[ShellTI] Solicitud de acceso',
@@ -313,7 +313,8 @@ app.post('/admin/reject/:id', requireAdmin, async (req, res) => {
 app.post('/admin/extend-user', requireAdmin, (req, res) => {
   const { email, durationMs, durationLabel, maxScans } = req.body;
   if (!email || !durationMs) return res.status(400).json({ error: 'email y durationMs requeridos' });
-  const user = auth.getUsers().find(u => u.email === email);
+  const users = await auth.getUsers();
+  const user = users.find(u => u.email === email);
   if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
   user.expiresAt = new Date(Date.now() + Number(durationMs)).toISOString();
   if (maxScans != null) { user.maxScans = parseInt(maxScans); user.scansUsed = 0; }
@@ -322,7 +323,7 @@ app.post('/admin/extend-user', requireAdmin, (req, res) => {
 });
 
 app.post('/admin/revoke', requireAdmin, (req, res) => {
-  const user = auth.revokeUser(req.body.email);
+  const user = await auth.revokeUser(req.body.email);
   if (!user) return res.status(404).json({ error: 'No encontrado' });
   res.json({ success: true });
 });
@@ -330,7 +331,7 @@ app.post('/admin/revoke', requireAdmin, (req, res) => {
 app.post('/admin/update-resources', requireAdmin, (req, res) => {
   const { email, resources } = req.body;
   if (!email) return res.status(400).json({ error: 'email requerido' });
-  const user = auth.updateUserResources(email, Array.isArray(resources) ? resources : []);
+  const user = await auth.updateUserResources(email, Array.isArray(resources) ? resources : []);
   if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
   console.log(`[admin] Recursos actualizados: ${email} → ${(user.resources||[]).join(',')}`);
   res.json({ success: true, resources: user.resources });
@@ -340,7 +341,7 @@ app.post('/admin/update-resources', requireAdmin, (req, res) => {
 function checkScanAccess(req, res, next) {
   const token = req.headers['x-user-token'];
   if (!token) return res.status(401).json({ error: 'Token requerido' });
-  const user = auth.validateToken(token, { strict: false });
+  const user = await auth.validateToken(token, { strict: false });
   if (!user) return res.status(401).json({ error: 'Token inválido' });
   const status = buildStatus(user);
   if (status.expired) return res.status(403).json({ error: 'Acceso expirado', code: 'EXPIRED', status });
@@ -364,12 +365,12 @@ app.post('/scan', checkScanAccess, async (req, res) => {
     const cached = scanCache.get(domain);
     if (cached && (Date.now() - cached.ts) < CACHE_TTL) {
       console.log(`[/scan] Cache hit: ${domain}`);
-      auth.incrementScan(req.userToken);
-      const updatedUser = auth.validateToken(req.userToken, { strict: false });
+      await auth.incrementScan(req.userToken);
+      const updatedUser = await auth.validateToken(req.userToken, { strict: false });
       return res.json({ success: true, data: cached.data, crawlerData: cached.crawlerData, fromCache: true, status: updatedUser ? buildStatus(updatedUser) : null });
     }
 
-    auth.incrementScan(req.userToken);
+    await auth.incrementScan(req.userToken);
 
     const crawlerData = await scanWebsite(url);
     const raw         = await analyze(crawlerData);
@@ -387,7 +388,7 @@ app.post('/scan', checkScanAccess, async (req, res) => {
 
     scanCache.set(domain, { data: json, crawlerData, ts: Date.now() });
 
-    const updatedUser = auth.validateToken(req.userToken, { strict: false });
+    const updatedUser = await auth.validateToken(req.userToken, { strict: false });
     res.json({ success: true, data: json, crawlerData, status: updatedUser ? buildStatus(updatedUser) : null });
   } catch(err) {
     console.error('/scan error:', err.message);
@@ -415,7 +416,7 @@ Devuelve SOLO JSON válido con: domain, ip, ipv6, asn, isp, country, city, cdn, 
       ]
     });
     const json = extractJSON(response.choices[0].message.content);
-    const updatedUser = auth.validateToken(req.userToken, { strict: false });
+    const updatedUser = await auth.validateToken(req.userToken, { strict: false });
     res.json({ success: true, data: json, status: updatedUser ? buildStatus(updatedUser) : null });
   } catch(err) {
     console.error('/performance error:', err.message);

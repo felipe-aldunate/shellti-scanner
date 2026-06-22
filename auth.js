@@ -1,150 +1,174 @@
 // ── auth.js ──────────────────────────────────────────────────────────────────
 const crypto = require('crypto');
-const fs     = require('fs');
-const path   = require('path');
+const admin  = require('firebase-admin');
 
-// Persistencia en archivo JSON (sobrevive reinicios del servidor)
-const DB_PATH = path.join(__dirname, 'data', 'db.json');
-
-function loadDB() {
-  try {
-    fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
-    if (fs.existsSync(DB_PATH)) {
-      return JSON.parse(fs.readFileSync(DB_PATH, 'utf8'));
-    }
-  } catch(e) { console.error('[auth] loadDB error:', e.message); }
-  return { requests: [], users: [], sessions: [] };
+// ── Firebase init ─────────────────────────────────────────────────────────────
+if (!admin.apps.length) {
+  admin.initializeApp({
+    credential: admin.credential.cert({
+      projectId:   process.env.FIREBASE_PROJECT_ID,
+      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+      privateKey:  process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n')
+    })
+  });
 }
 
-function saveDB(db) {
-  try {
-    fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
-    fs.writeFileSync(DB_PATH, JSON.stringify(db, null, 2), 'utf8');
-  } catch(e) { console.error('[auth] saveDB error:', e.message); }
-}
-
-// db en memoria + persistencia en disco
-let db = loadDB();
+const db = admin.firestore();
+const COL = {
+  requests: 'requests',
+  users:    'users',
+  sessions: 'sessions'
+};
 
 function generateToken(length = 32) {
   return crypto.randomBytes(length).toString('hex');
 }
 
-function createRequest({ name, company, email, reason }) {
+// ── REQUESTS ──────────────────────────────────────────────────────────────────
+async function createRequest({ name, company, email, reason }) {
   const id = generateToken(8);
-  const r  = { id, name, company, email, reason,
+  const r  = {
+    id, name, company, email, reason,
     status: 'pending', createdAt: new Date().toISOString(),
-    approvedAt: null, expiresAt: null, accessToken: null, durationLabel: null };
-  db.requests.unshift(r);
-  saveDB(db);
+    approvedAt: null, expiresAt: null, accessToken: null, durationLabel: null
+  };
+  await db.collection(COL.requests).doc(id).set(r);
   return r;
 }
 
-function getRequests() { return db.requests; }
-function getRequest(id) { return db.requests.find(r => r.id === id); }
+async function getRequests() {
+  const snap = await db.collection(COL.requests).orderBy('createdAt', 'desc').get();
+  return snap.docs.map(d => d.data());
+}
 
-function approveRequest(id, durationMs, durationLabel, maxScans, resources) {
-  const req = getRequest(id);
+async function getRequest(id) {
+  const doc = await db.collection(COL.requests).doc(id).get();
+  return doc.exists ? doc.data() : null;
+}
+
+async function approveRequest(id, durationMs, durationLabel, maxScans, resources) {
+  const req = await getRequest(id);
   if (!req) return null;
   const token = generateToken(24);
   const now   = new Date();
-  req.status        = 'approved';
-  req.approvedAt    = now.toISOString();
-  req.expiresAt     = new Date(now.getTime() + durationMs).toISOString();
-  req.accessToken   = token;
-  req.durationLabel = durationLabel;
-  req.maxScans      = maxScans || null;
-  req.resources     = resources || [];
+  const updated = {
+    ...req,
+    status:        'approved',
+    approvedAt:    now.toISOString(),
+    expiresAt:     new Date(now.getTime() + durationMs).toISOString(),
+    accessToken:   token,
+    durationLabel,
+    maxScans:      maxScans || null,
+    resources:     resources || []
+  };
+  await db.collection(COL.requests).doc(id).set(updated);
 
-  const existing = db.users.find(u => u.email === req.email);
-  if (existing) {
-    existing.token      = token;
-    existing.expiresAt  = req.expiresAt;
-    existing.active     = true;
-    existing.maxScans   = maxScans || null;
-    existing.scansUsed  = 0;
-    existing.resources  = resources || [];
+  const userSnap = await db.collection(COL.users).where('email', '==', req.email).limit(1).get();
+  const userData = {
+    email:     req.email,
+    name:      req.name,
+    company:   req.company,
+    token,
+    expiresAt: updated.expiresAt,
+    active:    true,
+    createdAt: now.toISOString(),
+    maxScans:  maxScans || null,
+    scansUsed: 0,
+    resources: resources || []
+  };
+  if (!userSnap.empty) {
+    await userSnap.docs[0].ref.set(userData);
   } else {
-    db.users.push({
-      email: req.email, name: req.name, company: req.company,
-      token, expiresAt: req.expiresAt, active: true,
-      createdAt: now.toISOString(),
-      maxScans: maxScans || null,
-      scansUsed: 0,
-      resources: resources || []
-    });
+    await db.collection(COL.users).add(userData);
   }
-  saveDB(db);
-  return req;
+  return updated;
 }
 
-function revokeUser(email) {
-  const user = db.users.find(u => u.email === email);
-  if (user) { user.active = false; user.expiresAt = new Date().toISOString(); }
-  saveDB(db);
-  return user;
+async function rejectRequest(id) {
+  const req = await getRequest(id);
+  if (!req) return null;
+  await db.collection(COL.requests).doc(id).update({ status: 'rejected' });
+  return { ...req, status: 'rejected' };
 }
 
-function validateToken(token, { strict = true } = {}) {
+// ── USERS ─────────────────────────────────────────────────────────────────────
+async function getUsers() {
+  const snap = await db.collection(COL.users).get();
+  return snap.docs.map(d => d.data());
+}
+
+async function revokeUser(email) {
+  const snap = await db.collection(COL.users).where('email', '==', email).limit(1).get();
+  if (snap.empty) return null;
+  const ref = snap.docs[0].ref;
+  await ref.update({ active: false, expiresAt: new Date().toISOString() });
+  return snap.docs[0].data();
+}
+
+async function updateUserResources(email, resources) {
+  const snap = await db.collection(COL.users).where('email', '==', email).limit(1).get();
+  if (snap.empty) return null;
+  await snap.docs[0].ref.update({ resources: resources || [] });
+  return snap.docs[0].data();
+}
+
+async function validateToken(token, { strict = true } = {}) {
   if (!token) return null;
-  db = loadDB();
-  const user = db.users.find(u => u.token === token && u.active);
-  if (!user) return null;
+  const snap = await db.collection(COL.users)
+    .where('token', '==', token)
+    .where('active', '==', true)
+    .limit(1).get();
+  if (snap.empty) return null;
+  const user = snap.docs[0].data();
+  const ref  = snap.docs[0].ref;
 
-  const expired  = new Date(user.expiresAt) < new Date();
+  const expired   = new Date(user.expiresAt) < new Date();
   const scansDone = user.maxScans != null && (user.scansUsed || 0) >= user.maxScans;
 
   if (strict) {
-    // Modo estricto (checkAuth al entrar): bloquea si tiempo o consultas agotados
-    if (expired) { user.active = false; saveDB(db); return null; }
-    if (scansDone) { user.active = false; saveDB(db); return null; }
+    if (expired)   { await ref.update({ active: false }); return null; }
+    if (scansDone) { await ref.update({ active: false }); return null; }
   }
-
-  // Siempre retornar el usuario con estado real para que el frontend decida
-  return {
-    ...user,
-    expired,
-    scansDone,
-    canScan: !expired && !scansDone,
-    resources: user.resources || []
-  };
+  return { ...user, expired, scansDone, canScan: !expired && !scansDone, resources: user.resources || [] };
 }
 
-function incrementScan(token) {
-  db = loadDB();
-  const user = db.users.find(u => u.token === token && u.active);
-  if (!user) return null;
-  user.scansUsed = (user.scansUsed || 0) + 1;
-  // NO desactivar aquí — el usuario puede seguir viendo resultados
-  saveDB(db);
-  return user;
+async function incrementScan(token) {
+  const snap = await db.collection(COL.users)
+    .where('token', '==', token)
+    .where('active', '==', true)
+    .limit(1).get();
+  if (snap.empty) return null;
+  const user = snap.docs[0].data();
+  const newCount = (user.scansUsed || 0) + 1;
+  await snap.docs[0].ref.update({ scansUsed: newCount });
+  return { ...user, scansUsed: newCount };
 }
 
+// ── ADMIN SESSIONS ────────────────────────────────────────────────────────────
 function createAdminSession() {
   const token = generateToken(32);
-  db.sessions.push({ token, createdAt: new Date().toISOString() });
-  if (db.sessions.length > 20) db.sessions.shift();
-  saveDB(db);
+  // Sessions son efímeras — las guardamos en memoria + Firestore como backup
+  db.collection(COL.sessions).add({
+    token, createdAt: new Date().toISOString()
+  }).catch(() => {});
+  _sessions.add(token);
+  setTimeout(() => _sessions.delete(token), 24 * 3600 * 1000); // 24h
   return token;
 }
 
-function validateAdminSession(token) {
-  db = loadDB();
-  return db.sessions.some(s => s.token === token);
-}
+const _sessions = new Set();
 
-function getUsers() { return db.users; }
-
-function updateUserResources(email, resources) {
-  db = loadDB();
-  const user = db.users.find(u => u.email === email);
-  if (!user) return null;
-  user.resources = resources || [];
-  saveDB(db);
-  return user;
+async function validateAdminSession(token) {
+  if (_sessions.has(token)) return true;
+  // fallback: buscar en Firestore
+  const snap = await db.collection(COL.sessions).where('token', '==', token).limit(1).get();
+  if (!snap.empty) { _sessions.add(token); return true; }
+  return false;
 }
 
 module.exports = {
-  createRequest, getRequests, getRequest, approveRequest,
-  revokeUser, validateToken, incrementScan, createAdminSession, validateAdminSession, getUsers, updateUserResources
+  createRequest, getRequests, getRequest, approveRequest, rejectRequest,
+  revokeUser, validateToken, incrementScan,
+  createAdminSession, validateAdminSession,
+  getUsers, updateUserResources
 };
