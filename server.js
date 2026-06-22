@@ -107,6 +107,18 @@ function getBase(req) {
   return process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
 }
 
+function getAccessUrl(token, resources) {
+  const shellti = process.env.SHELLTI_URL || 'https://shellti.com';
+  // Si tiene recursos de shellti.com, el link va a shellti
+  if (resources && resources.length > 0) {
+    // Prioridad: agente > diagnostico > scanner
+    if (resources.includes('agente'))      return `${shellti}/agente.html?token=${token}`;
+    if (resources.includes('diagnostico')) return `${shellti}/diagnostico.html?token=${token}`;
+  }
+  // Sin recursos de shellti o solo scanner → dashboard del scanner
+  return `${process.env.BASE_URL || 'https://web-production-372660.up.railway.app'}/?token=${token}`;
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function extractJSON(raw) {
   const f1 = raw.match(/```json\s*([\s\S]*?)\s*```/);
@@ -249,7 +261,7 @@ app.post('/admin/approve/:id', requireAdmin, async (req, res) => {
 
   console.log(`[admin] Aprobado: ${r.email} por ${durationLabel}${maxScans ? ` · ${maxScans} consultas` : ''} · recursos: ${resourceList.join(',') || 'ninguno'}`);
 
-  const accessUrl = `${getBase(req)}/?token=${r.accessToken}`;
+  const accessUrl = getAccessUrl(r.accessToken, resourceList);
   const expires   = new Date(r.expiresAt).toLocaleString('es-CL', {
     dateStyle: 'full', timeStyle: 'short', timeZone: 'America/Santiago'
   });
