@@ -25,7 +25,8 @@ console.log('[env] BASE_URL:', process.env.BASE_URL || 'NO CONFIGURADO');
 // ── CORS ──────────────────────────────────────────────────────────────────────
 const ALLOWED_ORIGINS = [
   'https://shellti.com',
-  'https://www.shellti.com'
+  'https://www.shellti.com',
+  'https://web-production-372660.up.railway.app'
 ];
 
 app.use(cors({
