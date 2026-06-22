@@ -115,6 +115,19 @@ nav{position:sticky;top:0;z-index:200;background:rgba(2,6,23,0.97);backdrop-filt
 .nav-tab-lnk{font-family:'JetBrains Mono',monospace;font-size:.6rem;letter-spacing:1.5px;text-transform:uppercase;padding:0 16px;height:100%;display:flex;align-items:center;text-decoration:none;color:var(--muted);border-bottom:2px solid transparent;transition:color .2s}
 .nav-tab-lnk.active{color:var(--cyan);border-bottom-color:var(--cyan)}
 .nav-tag{font-family:'JetBrains Mono',monospace;font-size:.6rem;letter-spacing:2px;text-transform:uppercase;border:1px solid rgba(0,212,255,0.3);color:var(--cyan);padding:3px 10px;background:rgba(0,212,255,0.07)}
+
+  /* Recursos */
+  .res-toggles{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+  .res-toggle{display:flex;align-items:center;gap:5px;font-family:'JetBrains Mono',monospace;
+    font-size:.58rem;letter-spacing:.8px;text-transform:uppercase;color:var(--muted);cursor:pointer}
+  .res-toggle input{accent-color:var(--cyan);width:14px;height:14px;cursor:pointer}
+  .res-toggle input:checked + span{color:var(--cyan)}
+  .btn-save-res{font-family:'JetBrains Mono',monospace;font-size:.58rem;letter-spacing:1px;
+    text-transform:uppercase;border:1px solid rgba(0,212,255,0.3);color:var(--cyan);
+    background:rgba(0,212,255,0.07);padding:5px 14px;border-radius:2px;cursor:pointer;margin-top:8px}
+  .btn-save-res:hover{background:rgba(0,212,255,0.15)}
+  .res-saved{font-family:'JetBrains Mono',monospace;font-size:.58rem;color:var(--green);
+    margin-left:8px;display:none}
 </style>
 </head>
 <body>
@@ -412,6 +425,17 @@ function userRow(u) {
   else if (diffH < 24) { expLabel = `Expira en ${diffH}h`; expClass = 'exp-ok'; }
   else { expLabel = `Expira ${exp.toLocaleDateString('es-CL')}`; expClass = 'exp-ok'; }
 
+  const resources = u.resources || [];
+  const resOptions = ['agente','diagnostico','biblioteca','scanner'];
+  const togglesHtml = resOptions.map(r =>
+    `<label class="res-toggle">
+      <input type="checkbox" ${resources.includes(r) ? 'checked' : ''}
+        id="res-${u.email.replace('@','_').replace('.','_')}-${r}">
+      <span>${r}</span>
+    </label>`
+  ).join('');
+  const emailKey = u.email.replace('@','_').replace('.','_');
+
   return `
     <div class="user-row">
       <div class="user-info">
@@ -420,6 +444,14 @@ function userRow(u) {
         <div class="user-company">${u.company}</div>
         <div class="user-expires ${expClass}">${expLabel}</div>
         ${u.maxScans != null ? `<div style="font-family:'JetBrains Mono',monospace;font-size:.6rem;color:${(u.scansUsed||0)>=u.maxScans?'var(--danger)':'var(--muted)'}">🔍 ${u.scansUsed||0}/${u.maxScans} consultas usadas</div>` : ''}
+        <div style="margin-top:10px;border-top:1px solid rgba(0,212,255,0.1);padding-top:8px">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:.58rem;color:var(--muted);letter-spacing:1px;margin-bottom:6px">ACCESO SHELLTI.COM</div>
+          <div class="res-toggles">${togglesHtml}</div>
+          <div style="display:flex;align-items:center">
+            <button class="btn-save-res" onclick="saveResources('${u.email}','${emailKey}')">GUARDAR</button>
+            <span class="res-saved" id="saved-${emailKey}">✓ guardado</span>
+          </div>
+        </div>
       </div>
       <button class="btn-revoke" onclick="revoke('${u.email}')">✗ Revocar</button>
     </div>`;
@@ -466,6 +498,26 @@ async function reject(id) {
     if (data.success) { toast('Solicitud rechazada', 'ok'); loadAll(); }
     else toast(data.error || 'Error', 'err');
   } catch(e) { toast('Error de conexión', 'err'); }
+}
+
+async function saveResources(email, emailKey) {
+  const resOptions = ['agente','diagnostico','biblioteca','scanner'];
+  const resources = resOptions.filter(r => {
+    const el = document.getElementById('res-' + emailKey + '-' + r);
+    return el && el.checked;
+  });
+  try {
+    const res = await fetch('/admin/update-resources', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-admin-token': adminToken },
+      body: JSON.stringify({ email, resources })
+    });
+    const data = await res.json();
+    if (data.success) {
+      const saved = document.getElementById('saved-' + emailKey);
+      if (saved) { saved.style.display = 'inline'; setTimeout(() => saved.style.display = 'none', 2000); }
+    }
+  } catch(e) { alert('Error al guardar recursos'); }
 }
 
 async function revoke(email) {
