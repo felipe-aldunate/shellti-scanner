@@ -162,7 +162,7 @@ async function requireAdmin(req, res, next) {
 // ── Rutas estáticas ───────────────────────────────────────────────────────────
 const PUBLIC_DIR = process.env.RAILWAY_ENVIRONMENT ? '/app' : __dirname;
 
-app.get('/', (req, res) => {
+app.get('/', async (req, res) => {
   const token = req.query.token;
   if (token) {
     const user = await auth.validateToken(token, { strict: false });
@@ -170,7 +170,7 @@ app.get('/', (req, res) => {
   }
   res.sendFile(path.join(PUBLIC_DIR, 'index.html'));
 });
-app.get('/dashboard.html',   (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'dashboard.html')));
+app.get('/dashboard.html',   async (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'dashboard.html')));
 app.get('/performance.html', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'performance.html')));
 app.get('/admin',            (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'admin.html')));
 app.get('/admin.html',       (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'admin.html')));
@@ -187,7 +187,7 @@ app.get('/auth/google/callback',
   (req, res) => res.redirect(`/admin?adminToken=${auth.createAdminSession()}`)
 );
 
-app.get('/auth/google/status', (req, res) => {
+app.get('/auth/google/status', async (req, res) => {
   if (req.isAuthenticated())
     res.json({ authenticated: true, user: req.user, adminToken: auth.createAdminSession() });
   else
@@ -234,7 +234,7 @@ app.post('/auth/validate', async (req, res) => {
 });
 
 // ── Admin ─────────────────────────────────────────────────────────────────────
-app.post('/admin/login', (req, res) => {
+app.post('/admin/login', async (req, res) => {
   const { password } = req.body;
   if (password !== (process.env.ADMIN_PASSWORD || 'ShellTI2024!'))
     return res.status(401).json({ error: 'Contraseña incorrecta' });
@@ -310,7 +310,7 @@ app.post('/admin/reject/:id', requireAdmin, async (req, res) => {
   res.json({ success: true });
 });
 
-app.post('/admin/extend-user', requireAdmin, (req, res) => {
+app.post('/admin/extend-user', requireAdmin, async (req, res) => {
   const { email, durationMs, durationLabel, maxScans } = req.body;
   if (!email || !durationMs) return res.status(400).json({ error: 'email y durationMs requeridos' });
   const users = await auth.getUsers();
@@ -322,13 +322,13 @@ app.post('/admin/extend-user', requireAdmin, (req, res) => {
   res.json({ success: true });
 });
 
-app.post('/admin/revoke', requireAdmin, (req, res) => {
+app.post('/admin/revoke', requireAdmin, async (req, res) => {
   const user = await auth.revokeUser(req.body.email);
   if (!user) return res.status(404).json({ error: 'No encontrado' });
   res.json({ success: true });
 });
 
-app.post('/admin/update-resources', requireAdmin, (req, res) => {
+app.post('/admin/update-resources', requireAdmin, async (req, res) => {
   const { email, resources } = req.body;
   if (!email) return res.status(400).json({ error: 'email requerido' });
   const user = await auth.updateUserResources(email, Array.isArray(resources) ? resources : []);
