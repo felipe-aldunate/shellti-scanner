@@ -7,7 +7,7 @@ const session        = require('express-session');
 const passport       = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const Groq           = require('groq-sdk');
-const nodemailer     = require('nodemailer');
+// Email via Brevo API (nodemailer reemplazado — Railway bloquea SMTP)
 const auth           = require('./auth');
 const scanWebsite    = require('./scanWebsite');
 const analyze        = require('./analyze');
@@ -71,37 +71,37 @@ if (process.env.GOOGLE_CLIENT_ID) {
 
 // ── Mailer ────────────────────────────────────────────────────────────────────
 function canEmail() {
-  return !!(process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD);
-}
-
-function getMailer() {
-  const pass = (process.env.GMAIL_APP_PASSWORD || '').replace(/\s+/g, '');
-  return nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: 587,
-    secure: false,
-    requireTLS: true,
-    auth: { user: process.env.GMAIL_USER, pass }
-  });
+  return !!(process.env.BREVO_API_KEY);
 }
 
 async function sendMail(to, subject, html) {
   if (!canEmail()) {
-    console.warn('[mail] Gmail no configurado — email no enviado a:', to);
+    console.warn('[mail] BREVO_API_KEY no configurada — email no enviado a:', to);
     return;
   }
   try {
-    const info = await getMailer().sendMail({
-      from: `"ShellTI Scanner" <${process.env.GMAIL_USER}>`,
-      to, subject, html
+    const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: {
+        'api-key': process.env.BREVO_API_KEY,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({
+        sender:      { name: 'ShellTI Scanner', email: 'contacto@shellti.com' },
+        to:          [{ email: to }],
+        subject,
+        htmlContent: html
+      })
     });
-    console.log('[mail] Enviado a:', to, '| MessageId:', info.messageId);
+    const data = await res.json();
+    if (res.ok) {
+      console.log('[mail] Enviado a:', to, '| messageId:', data.messageId);
+    } else {
+      console.error('[mail] ERROR Brevo:', JSON.stringify(data));
+    }
   } catch(e) {
     console.error('[mail] ERROR:', e.message);
-    console.error('[mail] SMTP config:', {
-      user: process.env.GMAIL_USER,
-      passLength: process.env.GMAIL_APP_PASSWORD?.length
-    });
   }
 }
 
