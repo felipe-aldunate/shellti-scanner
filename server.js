@@ -434,12 +434,32 @@ app.post('/leykarin/request', async (req, res) => {
   if (!name || !organization || !cargo || !email)
     return res.status(400).json({ error: 'Nombre, organizacion, cargo y email son requeridos' });
   try {
+    // Verificar solicitud pendiente o acceso activo
+    const existing = await authLK.getRequests();
+    const dup = existing.find(r => r.email === email && (r.status === 'pending' || r.status === 'approved'));
+    if (dup) {
+      if (dup.status === 'pending') {
+        return res.status(409).json({ error: 'Ya tienes una solicitud pendiente de aprobacion. Te avisaremos por email cuando sea revisada.' });
+      }
+      if (dup.status === 'approved') {
+        const user = await authLK.validateToken(dup.accessToken);
+        if (user) {
+          const shellti = process.env.SHELLTI_URL || 'https://shellti.com';
+          const accessUrl = shellti + '/leykarin.html?token=' + dup.accessToken;
+          const expires = new Date(dup.expiresAt).toLocaleString('es-CL', { dateStyle: 'full', timeStyle: 'short', timeZone: 'America/Santiago' });
+          await sendMail(email, '[ShellTI] Tu enlace de acceso al Agente Ley Karin',
+            '<div style="font-family:Arial,sans-serif;max-width:560px"><div style="background:#020617;padding:20px;border-bottom:3px solid #00D4FF"><h2 style="color:#00D4FF;margin:0">ShellTI · Ley Karin</h2></div><div style="padding:24px;background:#f8fafc;border:1px solid #e2e8f0;border-top:none"><p style="margin:0 0 12px">Estimado/a <strong>' + name + '</strong>,</p><p style="margin:0 0 16px;color:#475569">Ya tienes acceso activo. Aqui tu enlace de acceso:</p><div style="background:#f1f5f9;border-left:3px solid #00D4FF;padding:12px 16px;margin:0 0 20px"><p style="margin:0;font-size:11px;color:#64748b;text-transform:uppercase">Acceso valido hasta</p><p style="margin:4px 0 0;font-weight:700;font-size:15px">' + expires + '</p></div><div style="text-align:center;margin:0 0 20px"><a href="' + accessUrl + '" style="background:#00D4FF;color:#020617;padding:14px 36px;text-decoration:none;font-weight:700;display:inline-block">ACCEDER AL AGENTE</a></div><p style="font-size:11px;color:#94a3b8;text-align:center;word-break:break-all"><a href="' + accessUrl + '" style="color:#0284c7">' + accessUrl + '</a></p></div></div>'
+          );
+          return res.status(409).json({ error: 'Ya tienes acceso activo. Te hemos reenviado el enlace a tu correo.', resent: true });
+        }
+      }
+    }
     const r = await authLK.createRequest({ name, organization, cargo, email, context });
-    console.log(`[leykarin] Nueva solicitud: ${name} <${email}> (${organization})`);
+    console.log('[leykarin] Nueva solicitud: ' + name + ' <' + email + '> (' + organization + ')');
     await sendMail(
       process.env.GMAIL_USER,
-      `[Ley Karin] Nueva solicitud — ${name} (${organization})`,
-      `<div style="font-family:Arial,sans-serif;max-width:560px"><div style="background:#020617;padding:20px;border-bottom:3px solid #00D4FF"><h2 style="color:#00D4FF;margin:0">ShellTI &middot; Ley Karin</h2><p style="color:#64748b;margin:4px 0 0;font-size:13px">Solicitud de acceso al agente</p></div><div style="padding:20px;background:#f8fafc;border:1px solid #e2e8f0;border-top:none"><table style="width:100%;border-collapse:collapse;font-size:14px"><tr><td style="padding:6px 0;color:#64748b;width:120px">Nombre</td><td style="font-weight:600">${name}</td></tr><tr><td style="padding:6px 0;color:#64748b">Organizacion</td><td>${organization}</td></tr><tr><td style="padding:6px 0;color:#64748b">Cargo</td><td>${cargo}</td></tr><tr><td style="padding:6px 0;color:#64748b">Email</td><td><a href="mailto:${email}">${email}</a></td></tr>${context ? `<tr><td style="padding:6px 0;color:#64748b;vertical-align:top">Contexto</td><td>${context}</td></tr>` : ''}</table><p style="margin-top:16px"><a href="https://shellti.com/admin.html" style="background:#00D4FF;color:#020617;padding:10px 24px;text-decoration:none;font-weight:700;display:inline-block">REVISAR EN ADMIN</a></p></div></div>`
+      '[Ley Karin] Nueva solicitud — ' + name + ' (' + organization + ')',
+      '<div style="font-family:Arial,sans-serif;max-width:560px"><div style="background:#020617;padding:20px;border-bottom:3px solid #00D4FF"><h2 style="color:#00D4FF;margin:0">ShellTI · Ley Karin</h2><p style="color:#64748b;margin:4px 0 0;font-size:13px">Solicitud de acceso al agente</p></div><div style="padding:20px;background:#f8fafc;border:1px solid #e2e8f0;border-top:none"><table style="width:100%;border-collapse:collapse;font-size:14px"><tr><td style="padding:6px 0;color:#64748b;width:120px">Nombre</td><td style="font-weight:600">' + name + '</td></tr><tr><td style="padding:6px 0;color:#64748b">Organizacion</td><td>' + organization + '</td></tr><tr><td style="padding:6px 0;color:#64748b">Cargo</td><td>' + cargo + '</td></tr><tr><td style="padding:6px 0;color:#64748b">Email</td><td>' + email + '</td></tr></table><p style="margin-top:16px"><a href="https://shellti.com/admin.html" style="background:#00D4FF;color:#020617;padding:10px 24px;text-decoration:none;font-weight:700;display:inline-block">REVISAR EN ADMIN</a></p></div></div>'
     );
     res.json({ success: true, id: r.id });
   } catch(e) {
@@ -466,14 +486,10 @@ app.post('/leykarin/admin/approve/:id', requireAdmin, async (req, res) => {
   try {
     const r = await authLK.approveRequest(req.params.id, Number(durationMs), durationLabel);
     if (!r) return res.status(404).json({ error: 'Solicitud no encontrada' });
-    const accessUrl = `${shellti}/leykarin.html?token=${r.accessToken}`;
-    const expires = new Date(r.expiresAt).toLocaleString('es-CL', {
-      dateStyle: 'full', timeStyle: 'short', timeZone: 'America/Santiago'
-    });
-    await sendMail(
-      r.email,
-      '[ShellTI] Tu acceso al Agente Ley Karin ha sido habilitado',
-      `<div style="font-family:Arial,sans-serif;max-width:560px"><div style="background:#020617;padding:20px;border-bottom:3px solid #00D4FF"><h2 style="color:#00D4FF;margin:0">ShellTI &middot; Ley Karin</h2><p style="color:#64748b;margin:4px 0 0;font-size:13px">Orientacion especializada &middot; Ley 21.643</p></div><div style="padding:24px;background:#f8fafc;border:1px solid #e2e8f0;border-top:none"><p style="margin:0 0 12px">Estimado/a <strong>${r.name}</strong>,</p><p style="margin:0 0 16px;color:#475569;line-height:1.6">Hemos habilitado tu acceso al <strong>Agente Ley Karin</strong> de ShellTI.</p><div style="background:#f1f5f9;border-left:3px solid #00D4FF;padding:12px 16px;margin:0 0 20px"><p style="margin:0;font-size:11px;color:#64748b;text-transform:uppercase">Acceso habilitado hasta</p><p style="margin:4px 0 0;font-weight:700;font-size:15px;color:#0f172a">${expires}</p></div><div style="text-align:center;margin:0 0 20px"><a href="${accessUrl}" style="background:#00D4FF;color:#020617;padding:14px 36px;text-decoration:none;font-weight:700;font-size:14px;display:inline-block">ACCEDER AL AGENTE</a></div><p style="font-size:11px;color:#94a3b8;text-align:center;word-break:break-all"><a href="${accessUrl}" style="color:#0284c7">${accessUrl}</a></p><hr style="border:none;border-top:1px solid #e2e8f0;margin:20px 0"/><p style="font-size:11px;color:#94a3b8;line-height:1.6;margin:0">Este enlace es personal e intransferible. Consultas: <a href="mailto:contacto@shellti.com" style="color:#0284c7">contacto@shellti.com</a>.</p></div></div>`
+    const accessUrl = shellti + '/leykarin.html?token=' + r.accessToken;
+    const expires = new Date(r.expiresAt).toLocaleString('es-CL', { dateStyle: 'full', timeStyle: 'short', timeZone: 'America/Santiago' });
+    await sendMail(r.email, '[ShellTI] Tu acceso al Agente Ley Karin ha sido habilitado',
+      '<div style="font-family:Arial,sans-serif;max-width:560px"><div style="background:#020617;padding:20px;border-bottom:3px solid #00D4FF"><h2 style="color:#00D4FF;margin:0">ShellTI · Ley Karin</h2><p style="color:#64748b;margin:4px 0 0;font-size:13px">Orientacion especializada · Ley 21.643</p></div><div style="padding:24px;background:#f8fafc;border:1px solid #e2e8f0;border-top:none"><p style="margin:0 0 12px">Estimado/a <strong>' + r.name + '</strong>,</p><p style="margin:0 0 16px;color:#475569;line-height:1.6">Hemos habilitado tu acceso al <strong>Agente Ley Karin</strong> de ShellTI.</p><div style="background:#f1f5f9;border-left:3px solid #00D4FF;padding:12px 16px;margin:0 0 20px"><p style="margin:0;font-size:11px;color:#64748b;text-transform:uppercase">Acceso habilitado hasta</p><p style="margin:4px 0 0;font-weight:700;font-size:15px;color:#0f172a">' + expires + '</p></div><div style="text-align:center;margin:0 0 20px"><a href="' + accessUrl + '" style="background:#00D4FF;color:#020617;padding:14px 36px;text-decoration:none;font-weight:700;font-size:14px;display:inline-block">ACCEDER AL AGENTE</a></div><p style="font-size:11px;color:#94a3b8;text-align:center;word-break:break-all"><a href="' + accessUrl + '" style="color:#0284c7">' + accessUrl + '</a></p><hr style="border:none;border-top:1px solid #e2e8f0;margin:20px 0"/><p style="font-size:11px;color:#94a3b8;line-height:1.6;margin:0">Este enlace es personal e intransferible. Puede compartirse con quien necesite acceso. Consultas: <a href="mailto:contacto@shellti.com" style="color:#0284c7">contacto@shellti.com</a>.</p></div></div>'
     );
     res.json({ success: true });
   } catch(e) {
@@ -488,7 +504,7 @@ app.post('/leykarin/admin/reject/:id', requireAdmin, async (req, res) => {
     if (!r) return res.status(404).json({ error: 'No encontrada' });
     await authLK.rejectRequest(req.params.id);
     await sendMail(r.email, '[ShellTI] Solicitud de acceso Ley Karin',
-      `<div style="font-family:Arial,sans-serif;max-width:560px;padding:20px"><p>Estimado/a ${r.name},</p><p>En esta oportunidad no fue posible habilitar tu acceso. Para mas informacion: <a href="mailto:contacto@shellti.com">contacto@shellti.com</a>.</p></div>`
+      '<div style="font-family:Arial,sans-serif;max-width:560px;padding:20px"><p>Estimado/a ' + r.name + ',</p><p>En esta oportunidad no fue posible habilitar tu acceso. Para mas informacion: <a href="mailto:contacto@shellti.com">contacto@shellti.com</a>.</p></div>'
     );
     res.json({ success: true });
   } catch(e) { res.status(500).json({ error: e.message }); }
