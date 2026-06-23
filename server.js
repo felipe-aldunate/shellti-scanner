@@ -456,6 +456,90 @@ app.post('/leykarin/history/save', async (req, res) => {
   }
 });
 
+
+// ── Copropiedad — Solicitud pública ─────────────────────────────────────────
+app.post('/copropiedad/request', async (req, res) => {
+  const { name, organization, cargo, email, context } = req.body;
+  if (!name || !organization || !cargo || !email)
+    return res.status(400).json({ error: 'Todos los campos son requeridos' });
+  try {
+    const r = await authCP.createRequest({ name, organization, cargo, email, context });
+    console.log(`[copropiedad] Nueva solicitud: ${name} <${email}>`);
+    await sendMail(process.env.GMAIL_USER,
+      `[Copropiedad] Nueva solicitud — ${name} (${organization})`,
+      `<div style="font-family:Arial,sans-serif;max-width:560px"><div style="background:#020617;padding:20px;border-bottom:3px solid #00D4FF"><h2 style="color:#00D4FF;margin:0">ShellTI &middot; Agente Copropiedad</h2></div><div style="padding:20px;background:#f8fafc;border:1px solid #e2e8f0;border-top:none"><table style="width:100%;font-size:14px;border-collapse:collapse"><tr><td style="padding:5px 0;color:#64748b;width:120px">Nombre</td><td style="font-weight:600">${name}</td></tr><tr><td style="padding:5px 0;color:#64748b">Organizacion</td><td>${organization}</td></tr><tr><td style="padding:5px 0;color:#64748b">Cargo</td><td>${cargo}</td></tr><tr><td style="padding:5px 0;color:#64748b">Email</td><td>${email}</td></tr>${context ? `<tr><td style="padding:5px 0;color:#64748b;vertical-align:top">Contexto</td><td>${context}</td></tr>` : ''}</table><p style="margin-top:16px"><a href="https://shellti.com/admin.html" style="background:#00D4FF;color:#020617;padding:10px 24px;text-decoration:none;font-weight:700;display:inline-block">REVISAR EN ADMIN</a></p></div></div>`
+    );
+    res.json({ success: true, id: r.id });
+  } catch(e) { console.error('[copropiedad/request]', e.message); res.status(500).json({ error: e.message }); }
+});
+
+app.post('/copropiedad/validate', async (req, res) => {
+  const user = await authCP.validateToken(req.body.token);
+  if (!user) return res.json({ valid: false });
+  res.json({ valid: true, name: user.name, organization: user.organization, expiresAt: user.expiresAt });
+});
+
+app.get('/copropiedad/admin/requests', requireAdmin, async (req, res) => {
+  const [requests, users] = await Promise.all([authCP.getRequests(), authCP.getUsers()]);
+  res.json({ requests, users });
+});
+
+app.post('/copropiedad/admin/approve/:id', requireAdmin, async (req, res) => {
+  const { durationMs, durationLabel } = req.body;
+  if (!durationMs) return res.status(400).json({ error: 'Duracion requerida' });
+  const shellti = process.env.SHELLTI_URL || 'https://shellti.com';
+  try {
+    const r = await authCP.approveRequest(req.params.id, Number(durationMs), durationLabel);
+    if (!r) return res.status(404).json({ error: 'Solicitud no encontrada' });
+    const accessUrl = `${shellti}/copropiedad.html?token=${r.accessToken}`;
+    const expires = new Date(r.expiresAt).toLocaleString('es-CL',{dateStyle:'full',timeStyle:'short',timeZone:'America/Santiago'});
+    await sendMail(r.email, '[ShellTI] Tu acceso al Agente Copropiedad ha sido habilitado',
+      `<div style="font-family:Arial,sans-serif;max-width:560px"><div style="background:#020617;padding:20px;border-bottom:3px solid #00D4FF"><h2 style="color:#00D4FF;margin:0">ShellTI &middot; Agente Copropiedad</h2><p style="color:#64748b;margin:4px 0 0;font-size:13px">Ley 21.442 &middot; Administracion de Condominios</p></div><div style="padding:24px;background:#f8fafc;border:1px solid #e2e8f0;border-top:none"><p style="margin:0 0 12px">Estimado/a <strong>${r.name}</strong>,</p><p style="margin:0 0 16px;color:#475569;line-height:1.6">Hemos habilitado tu acceso al <strong>Agente Copropiedad</strong> de ShellTI. Este recurso te permite obtener orientacion especializada sobre la Ley 21.442 de Copropiedad Inmobiliaria de Chile.</p><div style="background:#f1f5f9;border-left:3px solid #00D4FF;padding:12px 16px;margin:0 0 20px"><p style="margin:0;font-size:11px;color:#64748b;text-transform:uppercase">Acceso habilitado hasta</p><p style="margin:4px 0 0;font-weight:700;font-size:15px;color:#0f172a">${expires}</p></div><div style="text-align:center;margin:0 0 20px"><a href="${accessUrl}" style="background:#00D4FF;color:#020617;padding:14px 36px;text-decoration:none;font-weight:700;font-size:14px;display:inline-block">ACCEDER AL AGENTE</a></div><p style="font-size:11px;color:#94a3b8;text-align:center;word-break:break-all"><a href="${accessUrl}" style="color:#0284c7">${accessUrl}</a></p><hr style="border:none;border-top:1px solid #e2e8f0;margin:20px 0"/><p style="font-size:11px;color:#94a3b8;line-height:1.6;margin:0">Este enlace es personal e intransferible. Consultas: <a href="mailto:contacto@shellti.com" style="color:#0284c7">contacto@shellti.com</a>.</p></div></div>`
+    );
+    res.json({ success: true });
+  } catch(e) { console.error('[copropiedad/approve]', e.message); res.status(500).json({ error: e.message }); }
+});
+
+app.post('/copropiedad/admin/reject/:id', requireAdmin, async (req, res) => {
+  try {
+    const r = await authCP.getRequest(req.params.id);
+    if (!r) return res.status(404).json({ error: 'No encontrada' });
+    await authCP.rejectRequest(req.params.id);
+    await sendMail(r.email, '[ShellTI] Solicitud de acceso Agente Copropiedad',
+      `<div style="font-family:Arial,sans-serif;max-width:560px;padding:20px"><p>Estimado/a ${r.name},</p><p>En esta oportunidad no fue posible habilitar tu acceso. Para mas informacion: <a href="mailto:contacto@shellti.com">contacto@shellti.com</a>.</p></div>`
+    );
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/copropiedad/admin/revoke', requireAdmin, async (req, res) => {
+  const user = await authCP.revokeUser(req.body.email);
+  if (!user) return res.status(404).json({ error: 'No encontrado' });
+  res.json({ success: true });
+});
+
+app.post('/copropiedad/history/load', async (req, res) => {
+  const { token } = req.body;
+  if (!token) return res.status(400).json({ error: 'Token requerido' });
+  try {
+    const user = await authCP.validateToken(token);
+    if (!user) return res.status(401).json({ error: 'Token invalido' });
+    res.json({ sessions: user.chatSessions || [], user: { name: user.name, organization: user.organization } });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/copropiedad/history/save', async (req, res) => {
+  const { token, sessions } = req.body;
+  if (!token || !Array.isArray(sessions)) return res.status(400).json({ error: 'Parametros invalidos' });
+  try {
+    const user = await authCP.validateToken(token);
+    if (!user) return res.status(401).json({ error: 'Token invalido' });
+    await authCP.saveSessions(token, sessions.slice(-10));
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`\nShellTI Scanner corriendo en puerto ${PORT}`);
   console.log(`Admin: ${process.env.BASE_URL || 'http://localhost:' + PORT}/admin`);
