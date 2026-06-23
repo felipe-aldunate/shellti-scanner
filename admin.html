@@ -488,9 +488,9 @@ function reqCard(r) {
       <span class="res-lbl">Acceso</span>
       <div class="res-chips">
         ${RES_OPTIONS.map(opt => `
-          <label class="res-chip ${opt==='agente'?'checked':''}" id="rchip-${r.id}-${opt}" onclick="toggleResChip(event, this)">
-            <input type="checkbox" ${opt==='agente'?'checked':''} id="rcheck-${r.id}-${opt}"> ${opt}
-          </label>`).join('')}
+          <div class="res-chip ${opt==='agente'?'checked':''}" id="rchip-${r.id}-${opt}" onclick="this.classList.toggle('checked')">
+            ${opt}
+          </div>`).join('')}
       </div>
     </div>
     <div class="scans-row">
@@ -585,9 +585,9 @@ function openModal(email, resStr) {
   const current = resStr ? resStr.split(',').filter(Boolean) : [];
   document.getElementById('modal-email').textContent = email;
   document.getElementById('modal-res-chips').innerHTML = RES_OPTIONS.map(opt => `
-    <label class="res-chip ${current.includes(opt)?'checked':''}" onclick="toggleResChip(event, this)">
-      <input type="checkbox" ${current.includes(opt)?'checked':''}> ${opt}
-    </label>`).join('');
+    <div class="res-chip ${current.includes(opt)?'checked':''}" onclick="this.classList.toggle('checked')">
+      ${opt}
+    </div>`).join('');
   document.getElementById('resModal').classList.add('open');
 }
 
@@ -622,8 +622,8 @@ async function approve(id) {
   const maxScansEl = document.getElementById('maxScans-'+id);
   const maxScans   = maxScansEl?.value ? parseInt(maxScansEl.value) : null;
   const resources  = RES_OPTIONS.filter(r => {
-    const el = document.getElementById('rcheck-'+id+'-'+r);
-    return el?.checked;
+    const el = document.getElementById('rchip-'+id+'-'+r);
+    return el?.classList.contains('checked');
   });
   const btn = document.getElementById('approve-'+id);
   btn.disabled = true; btn.textContent = '...';
