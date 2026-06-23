@@ -631,6 +631,20 @@ app.post('/copropiedad/history/save', async (req, res) => {
 });
 
 
+
+// ── Ley Karin — Check approval status ────────────────────────────────────────
+app.post('/leykarin/check-approval', async (req, res) => {
+  const { email } = req.body;
+  if (!email) return res.json({ approved: false });
+  try {
+    const requests = await authLK.getRequests();
+    const approved = requests.find(r => r.email === email && r.status === 'approved');
+    if (!approved) return res.json({ approved: false });
+    const shellti = process.env.SHELLTI_URL || 'https://shellti.com';
+    res.json({ approved: true, accessUrl: shellti + '/leykarin.html?token=' + approved.accessToken });
+  } catch(e) { res.json({ approved: false }); }
+});
+
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`\nShellTI Scanner corriendo en puerto ${PORT}`);
   console.log(`Admin: ${process.env.BASE_URL || 'http://localhost:' + PORT}/admin`);
