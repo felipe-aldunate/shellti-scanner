@@ -3,219 +3,303 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ShellTI Scanner · Admin</title>
+<title>ShellTI · Admin</title>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-:root{--deep:#020617;--cyan:#00D4FF;--green:#34D399;--silver:#E2E8F0;--muted:#94A3B8;--border:rgba(0,212,255,0.13);--card:rgba(3,9,24,0.93);--danger:#FF6B6B;--warn:#F59E0B;--ok:#34D399}
+:root{
+  --deep:#020617;--cyan:#00D4FF;--green:#34D399;--silver:#E2E8F0;
+  --muted:#94A3B8;--border:rgba(0,212,255,0.13);--card:rgba(3,9,24,0.93);
+  --danger:#FF6B6B;--warn:#F59E0B;--ok:#34D399;--sidebar:240px
+}
+html,body{height:100%}
 body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--deep);color:var(--silver);min-height:100vh}
-body::before{content:'';position:fixed;inset:0;pointer-events:none;background-image:linear-gradient(rgba(0,212,255,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,255,0.03) 1px,transparent 1px);background-size:48px 48px}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;
+  background-image:linear-gradient(rgba(0,212,255,0.025) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,255,0.025) 1px,transparent 1px);
+  background-size:48px 48px}
 
-/* LOGIN */
-#loginView{display:flex;align-items:center;justify-content:center;min-height:calc(100vh - 54px);padding:24px}
-.login-card{position:relative;z-index:1;width:100%;max-width:380px;background:var(--card);border:1px solid var(--border)}
+/* ── LOGIN ── */
+#loginView{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:24px}
+.login-card{position:relative;z-index:1;width:100%;max-width:420px;background:var(--card);border:1px solid var(--border);padding:48px 44px 40px}
 .login-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--cyan),rgba(0,212,255,0.2))}
-.login-header{padding:28px 32px 20px;text-align:center;border-bottom:1px solid var(--border)}
-.logo{font-size:1.3rem;font-weight:800;color:var(--silver)}.logo span{color:var(--cyan)}
-.login-sub{font-family:'JetBrains Mono',monospace;font-size:.58rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-top:4px}
-.login-body{padding:24px 32px 28px}
-.field{margin-bottom:16px}
+.eyebrow{font-family:'JetBrains Mono',monospace;font-size:.58rem;letter-spacing:3px;text-transform:uppercase;color:var(--cyan);margin-bottom:20px}
+.login-title{font-size:2rem;font-weight:800;color:var(--silver);letter-spacing:-.5px;margin-bottom:10px}
+.login-desc{font-size:.85rem;color:var(--muted);line-height:1.7;margin-bottom:28px}
+.divider{height:1px;background:var(--border);margin-bottom:24px}
 .flabel{font-family:'JetBrains Mono',monospace;font-size:.58rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:6px}
 input[type=password]{width:100%;background:rgba(255,255,255,0.04);border:1px solid var(--border);color:var(--silver);font-family:'JetBrains Mono',monospace;font-size:.82rem;padding:11px 14px;outline:none;transition:border-color .2s}
 input[type=password]:focus{border-color:rgba(0,212,255,0.5)}
-.btn-login{width:100%;background:linear-gradient(135deg,var(--cyan),#00b8e6);color:var(--deep);border:none;font-family:'JetBrains Mono',monospace;font-size:.68rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;padding:12px;cursor:pointer;transition:opacity .2s}
-.btn-login:hover{opacity:.9}
+.btn-primary{width:100%;background:linear-gradient(135deg,var(--cyan),#00b8e6);color:var(--deep);border:none;font-family:'JetBrains Mono',monospace;font-size:.68rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;padding:13px;cursor:pointer;transition:opacity .2s}
+.btn-primary:hover{opacity:.9}
 .login-err{display:none;margin-top:12px;padding:10px 14px;background:rgba(255,107,107,0.1);border:1px solid rgba(255,107,107,0.3);color:var(--danger);font-family:'JetBrains Mono',monospace;font-size:.68rem;text-align:center}
 .login-err.visible{display:block}
+.back-link{margin-top:24px;text-align:center;font-family:'JetBrains Mono',monospace;font-size:.6rem;letter-spacing:1.5px;text-transform:uppercase}
+.back-link a{color:rgba(148,163,184,0.5);text-decoration:none;transition:color .2s}
+.back-link a:hover{color:var(--cyan)}
 
-/* NAV */
-nav{position:sticky;top:0;z-index:200;background:rgba(2,6,23,0.97);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:0 2rem;height:56px;display:flex;align-items:center;justify-content:space-between}
-.nav-logo{font-weight:800;font-size:1rem;color:var(--silver)}.nav-logo span{color:var(--cyan)}
-.nav-sub{font-family:'JetBrains Mono',monospace;font-size:.52rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted)}
-.nav-right{display:flex;align-items:center;gap:12px}
-.nav-tab{font-family:'JetBrains Mono',monospace;font-size:.58rem;letter-spacing:1.5px;text-transform:uppercase;padding:6px 14px;cursor:pointer;border:1px solid transparent;color:var(--muted);background:transparent;transition:all .2s}
-.nav-tab.active,.nav-tab:hover{color:var(--cyan);border-color:rgba(0,212,255,0.3);background:rgba(0,212,255,0.06)}
-.btn-logout{font-family:'JetBrains Mono',monospace;font-size:.58rem;letter-spacing:1.5px;text-transform:uppercase;padding:6px 14px;cursor:pointer;border:1px solid rgba(255,107,107,0.3);color:var(--danger);background:rgba(255,107,107,0.06);transition:all .2s}
-.btn-logout:hover{background:rgba(255,107,107,0.15)}
+/* ── SHELL: topbar + sidebar + content ── */
+#adminView{display:none;min-height:100vh;flex-direction:column}
 
-/* MAIN */
-#adminView{display:none;position:relative;z-index:1}
-.main{max-width:1000px;margin:0 auto;padding:32px 40px}
+/* Topbar */
+.topbar{position:sticky;top:0;z-index:200;background:rgba(2,6,23,0.97);backdrop-filter:blur(24px);border-bottom:1px solid var(--border);height:54px;display:flex;align-items:center;justify-content:space-between;padding:0 2rem}
+.topbar-brand{font-weight:800;font-size:1rem;color:var(--silver)}.topbar-brand span{color:var(--cyan)}
+.topbar-sub{font-family:'JetBrains Mono',monospace;font-size:.52rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted)}
+.topbar-right{display:flex;align-items:center;gap:12px}
+.btn-refresh{font-family:'JetBrains Mono',monospace;font-size:.58rem;letter-spacing:1px;text-transform:uppercase;padding:5px 12px;background:transparent;border:1px solid var(--border);color:var(--muted);cursor:pointer;transition:all .2s}
+.btn-refresh:hover{color:var(--cyan);border-color:rgba(0,212,255,0.4)}
+.btn-logout{font-family:'JetBrains Mono',monospace;font-size:.58rem;letter-spacing:1px;text-transform:uppercase;padding:5px 12px;background:rgba(255,107,107,0.08);border:1px solid rgba(255,107,107,0.3);color:var(--danger);cursor:pointer;transition:all .2s}
+.btn-logout:hover{background:rgba(255,107,107,0.18)}
 
-/* STATS */
-.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);margin-bottom:28px}
-.stat{background:var(--card);padding:18px 20px}
-.stat-val{font-size:1.8rem;font-weight:800;line-height:1}
-.stat-label{font-family:'JetBrains Mono',monospace;font-size:.58rem;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-top:4px}
-.c-cyan{color:var(--cyan)}.c-ok{color:var(--ok)}.c-warn{color:var(--warn)}.c-danger{color:var(--danger)}
+/* Shell body */
+.shell{display:flex;flex:1}
 
-/* SECTION */
-.section-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:1px;padding:10px 0}
-.section-title{font-family:'JetBrains Mono',monospace;font-size:.62rem;letter-spacing:2.5px;text-transform:uppercase;color:var(--green);display:flex;align-items:center;gap:8px}
-.section-title::before{content:'';width:16px;height:1px;background:var(--green)}
-.badge{font-family:'JetBrains Mono',monospace;font-size:.58rem;padding:2px 8px;background:rgba(0,212,255,0.08);border:1px solid var(--border);color:var(--cyan)}
+/* Sidebar */
+.sidebar{width:var(--sidebar);flex-shrink:0;border-right:1px solid var(--border);padding:24px 0;position:sticky;top:54px;height:calc(100vh - 54px);overflow-y:auto;background:rgba(2,6,23,0.6)}
+.sb-section{padding:0 16px;margin-bottom:24px}
+.sb-label{font-family:'JetBrains Mono',monospace;font-size:.52rem;letter-spacing:2.5px;text-transform:uppercase;color:rgba(148,163,184,0.5);margin-bottom:10px;padding:0 4px}
+.sb-stat{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;margin-bottom:2px;background:rgba(255,255,255,0.02);border:1px solid transparent;transition:border-color .2s}
+.sb-stat:hover{border-color:var(--border)}
+.sb-stat-label{font-size:.78rem;color:var(--muted)}
+.sb-stat-val{font-family:'JetBrains Mono',monospace;font-size:1.1rem;font-weight:700}
+.c-cyan{color:var(--cyan)}.c-ok{color:var(--ok)}.c-warn{color:var(--warn)}.c-muted{color:var(--muted)}
+.sb-divider{height:1px;background:var(--border);margin:0 16px 20px}
+.sb-nav-btn{width:100%;text-align:left;padding:9px 20px;font-family:'JetBrains Mono',monospace;font-size:.6rem;letter-spacing:1.5px;text-transform:uppercase;background:transparent;border:none;border-left:2px solid transparent;color:var(--muted);cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:8px}
+.sb-nav-btn:hover{color:var(--cyan);background:rgba(0,212,255,0.04)}
+.sb-nav-btn.active{color:var(--cyan);border-left-color:var(--cyan);background:rgba(0,212,255,0.06)}
+.sb-badge{font-size:.55rem;padding:1px 6px;background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.3);color:var(--warn);font-family:'JetBrains Mono',monospace}
 
-/* CARDS */
-.req-card{background:var(--card);border:1px solid transparent;margin-bottom:1px;padding:18px 20px;transition:border-color .2s}
-.req-card:hover{border-color:var(--border)}
-.req-top{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
-.req-info{flex:1}
-.req-name{font-size:.9rem;font-weight:700;color:var(--silver);margin-bottom:2px}
-.req-company{font-size:.78rem;color:var(--muted)}
-.req-email{font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--cyan);margin-top:4px}
-.req-reason{font-size:.78rem;color:var(--muted);margin-top:8px;line-height:1.6;font-style:italic}
-.req-time{font-family:'JetBrains Mono',monospace;font-size:.58rem;color:var(--muted)}
-.req-actions{display:flex;flex-direction:column;gap:6px;align-items:flex-end}
+/* Main content */
+.content{flex:1;padding:28px 32px;min-width:0;overflow:auto}
+.tab-panel{display:none}.tab-panel.active{display:block}
 
-/* DURATION PICKER */
-.dur-picker{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px;justify-content:flex-end}
-.dur-btn{font-family:'JetBrains Mono',monospace;font-size:.58rem;letter-spacing:1px;text-transform:uppercase;padding:4px 10px;border:1px solid var(--border);color:var(--muted);background:transparent;cursor:pointer;transition:all .2s}
-.dur-btn.sel{border-color:rgba(0,212,255,0.5);color:var(--cyan);background:rgba(0,212,255,0.08)}
-.dur-btn:hover{border-color:rgba(0,212,255,0.3);color:var(--cyan)}
+/* Section header */
+.sec-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.sec-title{font-family:'JetBrains Mono',monospace;font-size:.6rem;letter-spacing:2.5px;text-transform:uppercase;color:var(--green);display:flex;align-items:center;gap:8px}
+.sec-title::before{content:'';width:14px;height:1px;background:var(--green)}
 
-.action-row{display:flex;gap:6px}
-.btn-approve{font-family:'JetBrains Mono',monospace;font-size:.6rem;letter-spacing:1.5px;text-transform:uppercase;padding:7px 16px;border:none;background:rgba(52,211,153,0.15);color:var(--ok);border:1px solid rgba(52,211,153,0.3);cursor:pointer;transition:all .2s}
-.btn-approve:hover{background:rgba(52,211,153,0.25)}
-.btn-approve:disabled{opacity:.4;cursor:not-allowed}
-.btn-reject{font-family:'JetBrains Mono',monospace;font-size:.6rem;letter-spacing:1.5px;text-transform:uppercase;padding:7px 16px;background:rgba(255,107,107,0.1);color:var(--danger);border:1px solid rgba(255,107,107,0.3);cursor:pointer;transition:all .2s}
-.btn-reject:hover{background:rgba(255,107,107,0.2)}
+/* Search/filter bar */
+.filter-bar{display:flex;gap:8px;margin-bottom:16px}
+.filter-bar input{flex:1;background:rgba(255,255,255,0.04);border:1px solid var(--border);color:var(--silver);font-family:'JetBrains Mono',monospace;font-size:.72rem;padding:8px 12px;outline:none;transition:border-color .2s}
+.filter-bar input:focus{border-color:rgba(0,212,255,0.4)}
+.filter-bar input::placeholder{color:rgba(148,163,184,0.4)}
+.filter-chip{font-family:'JetBrains Mono',monospace;font-size:.58rem;letter-spacing:1px;text-transform:uppercase;padding:8px 14px;border:1px solid var(--border);color:var(--muted);background:transparent;cursor:pointer;transition:all .2s;white-space:nowrap}
+.filter-chip.active{border-color:rgba(0,212,255,0.4);color:var(--cyan);background:rgba(0,212,255,0.07)}
 
-/* STATUS TAG */
-.status{font-family:'JetBrains Mono',monospace;font-size:.55rem;letter-spacing:1px;text-transform:uppercase;padding:2px 8px}
-.s-pending{background:rgba(245,158,11,0.12);color:var(--warn);border:1px solid rgba(245,158,11,0.3)}
-.s-approved{background:rgba(52,211,153,0.12);color:var(--ok);border:1px solid rgba(52,211,153,0.3)}
-.s-rejected{background:rgba(255,107,107,0.12);color:var(--danger);border:1px solid rgba(255,107,107,0.3)}
+/* Request cards */
+.req-card{background:var(--card);border:1px solid var(--border);margin-bottom:6px;transition:border-color .2s}
+.req-card:hover{border-color:rgba(0,212,255,0.25)}
+.req-head{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;cursor:pointer;gap:12px}
+.req-head-left{display:flex;align-items:center;gap:14px;min-width:0}
+.req-avatar{width:34px;height:34px;flex-shrink:0;background:linear-gradient(135deg,rgba(0,212,255,0.15),rgba(52,211,153,0.1));border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.85rem;color:var(--cyan)}
+.req-meta{min-width:0}
+.req-name{font-size:.9rem;font-weight:600;color:var(--silver)}
+.req-company{font-size:.72rem;color:var(--muted);margin-top:1px}
+.req-head-right{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.req-email-tag{font-family:'JetBrains Mono',monospace;font-size:.62rem;color:var(--cyan)}
+.req-time{font-family:'JetBrains Mono',monospace;font-size:.58rem;color:rgba(148,163,184,0.5)}
+.chevron{font-size:.7rem;color:var(--muted);transition:transform .2s}
+.req-card.open .chevron{transform:rotate(180deg)}
 
-/* USERS */
-.user-row{background:var(--card);border:1px solid transparent;margin-bottom:1px;padding:14px 20px;display:flex;align-items:center;gap:16px;transition:border-color .2s}
-.user-row:hover{border-color:var(--border)}
-.user-info{flex:1}
-.user-name{font-size:.87rem;font-weight:600;color:var(--silver)}
-.user-email{font-family:'JetBrains Mono',monospace;font-size:.68rem;color:var(--cyan);margin-top:2px}
-.user-company{font-size:.75rem;color:var(--muted)}
-.user-expires{font-family:'JetBrains Mono',monospace;font-size:.62rem;margin-top:4px}
-.exp-ok{color:var(--ok)}.exp-warn{color:var(--warn)}.exp-dead{color:var(--danger)}
-.btn-revoke{font-family:'JetBrains Mono',monospace;font-size:.58rem;letter-spacing:1px;text-transform:uppercase;padding:6px 12px;background:rgba(255,107,107,0.1);color:var(--danger);border:1px solid rgba(255,107,107,0.3);cursor:pointer;transition:all .2s}
-.btn-revoke:hover{background:rgba(255,107,107,0.2)}
+.req-body{display:none;padding:0 18px 18px;border-top:1px solid rgba(0,212,255,0.08)}
+.req-card.open .req-body{display:block}
+.req-reason-box{margin:14px 0 16px;padding:10px 14px;background:rgba(255,255,255,0.02);border-left:2px solid rgba(0,212,255,0.2);font-size:.8rem;color:var(--muted);line-height:1.7;font-style:italic}
 
-.empty{padding:32px;text-align:center;font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--muted);border:1px dashed rgba(0,212,255,0.1)}
-.tab-content{display:none}.tab-content.active{display:block}
-.toast{position:fixed;bottom:24px;right:24px;padding:12px 20px;font-family:'JetBrains Mono',monospace;font-size:.7rem;z-index:999;opacity:0;transform:translateY(8px);transition:all .3s;border:1px solid}
+/* Duration picker */
+.dur-row{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+.dur-label{font-family:'JetBrains Mono',monospace;font-size:.58rem;letter-spacing:1px;text-transform:uppercase;color:var(--muted);white-space:nowrap}
+.dur-chips{display:flex;flex-wrap:wrap;gap:4px}
+.dur-chip{font-family:'JetBrains Mono',monospace;font-size:.58rem;letter-spacing:.5px;text-transform:uppercase;padding:4px 10px;border:1px solid var(--border);color:var(--muted);background:transparent;cursor:pointer;transition:all .2s}
+.dur-chip.sel{border-color:rgba(0,212,255,0.5);color:var(--cyan);background:rgba(0,212,255,0.1)}
+.dur-chip:hover:not(.sel){border-color:rgba(0,212,255,0.3);color:rgba(0,212,255,0.7)}
+
+/* Resources checkboxes */
+.res-row{display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.res-lbl{font-family:'JetBrains Mono',monospace;font-size:.58rem;letter-spacing:1px;text-transform:uppercase;color:var(--muted);white-space:nowrap}
+.res-chips{display:flex;flex-wrap:wrap;gap:4px}
+.res-chip{display:flex;align-items:center;gap:5px;padding:4px 10px;border:1px solid var(--border);cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:.58rem;letter-spacing:.5px;text-transform:uppercase;color:var(--muted);transition:all .2s;user-select:none}
+.res-chip input{display:none}
+.res-chip.checked{border-color:rgba(52,211,153,0.5);color:var(--ok);background:rgba(52,211,153,0.08)}
+
+/* Scans input */
+.scans-row{display:flex;align-items:center;gap:8px;margin-bottom:14px}
+.scans-row input[type=number]{width:90px;background:rgba(255,255,255,0.04);border:1px solid var(--border);color:var(--silver);font-family:'JetBrains Mono',monospace;font-size:.78rem;padding:6px 10px;outline:none;transition:border-color .2s}
+.scans-row input[type=number]:focus{border-color:rgba(0,212,255,0.4)}
+
+/* Action row */
+.action-row{display:flex;gap:8px;padding-top:4px}
+.btn-approve{font-family:'JetBrains Mono',monospace;font-size:.6rem;letter-spacing:1.5px;text-transform:uppercase;padding:8px 18px;background:rgba(52,211,153,0.12);border:1px solid rgba(52,211,153,0.35);color:var(--ok);cursor:pointer;transition:all .2s}
+.btn-approve:hover{background:rgba(52,211,153,0.22)}
+.btn-approve:disabled{opacity:.35;cursor:not-allowed}
+.btn-reject{font-family:'JetBrains Mono',monospace;font-size:.6rem;letter-spacing:1.5px;text-transform:uppercase;padding:8px 18px;background:rgba(255,107,107,0.08);border:1px solid rgba(255,107,107,0.3);color:var(--danger);cursor:pointer;transition:all .2s}
+.btn-reject:hover{background:rgba(255,107,107,0.18)}
+
+/* Status tags */
+.tag{font-family:'JetBrains Mono',monospace;font-size:.52rem;letter-spacing:1px;text-transform:uppercase;padding:2px 8px}
+.tag-pending{background:rgba(245,158,11,0.12);color:var(--warn);border:1px solid rgba(245,158,11,0.3)}
+.tag-approved{background:rgba(52,211,153,0.12);color:var(--ok);border:1px solid rgba(52,211,153,0.3)}
+.tag-rejected{background:rgba(255,107,107,0.12);color:var(--danger);border:1px solid rgba(255,107,107,0.3)}
+
+/* Users table */
+.users-table{width:100%;border-collapse:collapse}
+.users-table th{font-family:'JetBrains Mono',monospace;font-size:.55rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted);padding:8px 12px;text-align:left;border-bottom:1px solid var(--border);background:rgba(0,0,0,0.2)}
+.users-table td{padding:12px 12px;border-bottom:1px solid rgba(0,212,255,0.05);vertical-align:middle}
+.users-table tr:hover td{background:rgba(0,212,255,0.02)}
+.user-name-cell{font-size:.85rem;font-weight:600;color:var(--silver)}
+.user-email-cell{font-family:'JetBrains Mono',monospace;font-size:.65rem;color:var(--cyan);margin-top:2px}
+.user-co-cell{font-size:.72rem;color:var(--muted);margin-top:2px}
+.exp-ok{color:var(--ok);font-family:'JetBrains Mono',monospace;font-size:.65rem}
+.exp-warn{color:var(--warn);font-family:'JetBrains Mono',monospace;font-size:.65rem}
+.exp-dead{color:var(--danger);font-family:'JetBrains Mono',monospace;font-size:.65rem}
+.scans-cell{font-family:'JetBrains Mono',monospace;font-size:.65rem;color:var(--muted)}
+.res-tags{display:flex;flex-wrap:wrap;gap:3px}
+.res-tag{font-family:'JetBrains Mono',monospace;font-size:.52rem;padding:2px 7px;background:rgba(0,212,255,0.07);border:1px solid rgba(0,212,255,0.2);color:var(--cyan)}
+.btn-revoke{font-family:'JetBrains Mono',monospace;font-size:.55rem;letter-spacing:1px;text-transform:uppercase;padding:5px 10px;background:rgba(255,107,107,0.08);border:1px solid rgba(255,107,107,0.25);color:var(--danger);cursor:pointer;transition:all .2s;white-space:nowrap}
+.btn-revoke:hover{background:rgba(255,107,107,0.18)}
+.btn-edit-res{font-family:'JetBrains Mono',monospace;font-size:.55rem;letter-spacing:1px;text-transform:uppercase;padding:5px 10px;background:transparent;border:1px solid var(--border);color:var(--muted);cursor:pointer;transition:all .2s;white-space:nowrap}
+.btn-edit-res:hover{color:var(--cyan);border-color:rgba(0,212,255,0.3)}
+
+/* Edit resources modal */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(2,6,23,0.85);z-index:500;align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{position:relative;background:var(--card);border:1px solid var(--border);padding:32px;width:100%;max-width:440px}
+.modal::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--cyan),rgba(0,212,255,0.2))}
+.modal-title{font-family:'JetBrains Mono',monospace;font-size:.65rem;letter-spacing:2px;text-transform:uppercase;color:var(--cyan);margin-bottom:20px}
+.modal-actions{display:flex;gap:8px;margin-top:20px}
+.btn-save{font-family:'JetBrains Mono',monospace;font-size:.6rem;letter-spacing:1.5px;text-transform:uppercase;padding:8px 20px;background:rgba(0,212,255,0.12);border:1px solid rgba(0,212,255,0.35);color:var(--cyan);cursor:pointer;transition:all .2s}
+.btn-save:hover{background:rgba(0,212,255,0.22)}
+.btn-cancel{font-family:'JetBrains Mono',monospace;font-size:.6rem;letter-spacing:1.5px;text-transform:uppercase;padding:8px 18px;background:transparent;border:1px solid var(--border);color:var(--muted);cursor:pointer;transition:all .2s}
+.btn-cancel:hover{color:var(--silver)}
+
+.empty{padding:36px;text-align:center;font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--muted);border:1px dashed rgba(0,212,255,0.1)}
+
+/* Toast */
+.toast{position:fixed;bottom:24px;right:24px;padding:12px 20px;font-family:'JetBrains Mono',monospace;font-size:.7rem;z-index:999;opacity:0;transform:translateY(8px);transition:all .3s;border:1px solid;pointer-events:none}
 .toast.ok{background:rgba(52,211,153,0.15);color:var(--ok);border-color:rgba(52,211,153,0.4)}
 .toast.err{background:rgba(255,107,107,0.15);color:var(--danger);border-color:rgba(255,107,107,0.4)}
 .toast.show{opacity:1;transform:none}
-
-/* SHARED NAV */
-.shared-nav{position:sticky;top:0;width:100%;z-index:300;background:rgba(2,6,23,0.97);backdrop-filter:blur(28px);border-bottom:1px solid var(--border)}
-.shared-nav-top{display:flex;align-items:center;justify-content:space-between;padding:0 2rem;height:54px}
-.nav-brand-text{font-weight:800;font-size:1.1rem;color:var(--silver);letter-spacing:-.5px}
-.nav-brand-text span{color:var(--cyan)}
-.nav-brand-sub{font-family:'JetBrains Mono',monospace;font-size:.55rem;letter-spacing:2px;color:var(--muted);text-transform:uppercase}
-.nav-tabs-shared{display:flex;align-items:center;height:54px;gap:0}
-.nav-tab-lnk{font-family:'JetBrains Mono',monospace;font-size:.6rem;letter-spacing:1.5px;text-transform:uppercase;padding:0 16px;height:100%;display:flex;align-items:center;text-decoration:none;color:var(--muted);border-bottom:2px solid transparent;transition:color .2s}
-.nav-tab-lnk.active{color:var(--cyan);border-bottom-color:var(--cyan)}
-.nav-tag{font-family:'JetBrains Mono',monospace;font-size:.6rem;letter-spacing:2px;text-transform:uppercase;border:1px solid rgba(0,212,255,0.3);color:var(--cyan);padding:3px 10px;background:rgba(0,212,255,0.07)}
-
-  /* Recursos */
-  .res-toggles{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
-  .res-toggle{display:flex;align-items:center;gap:5px;font-family:'JetBrains Mono',monospace;
-    font-size:.58rem;letter-spacing:.8px;text-transform:uppercase;color:var(--muted);cursor:pointer}
-  .res-toggle input{accent-color:var(--cyan);width:14px;height:14px;cursor:pointer}
-  .res-toggle input:checked + span{color:var(--cyan)}
-  .btn-save-res{font-family:'JetBrains Mono',monospace;font-size:.58rem;letter-spacing:1px;
-    text-transform:uppercase;border:1px solid rgba(0,212,255,0.3);color:var(--cyan);
-    background:rgba(0,212,255,0.07);padding:5px 14px;border-radius:2px;cursor:pointer;margin-top:8px}
-  .btn-save-res:hover{background:rgba(0,212,255,0.15)}
-  .res-saved{font-family:'JetBrains Mono',monospace;font-size:.58rem;color:var(--green);
-    margin-left:8px;display:none}
-
-  .res-section{margin-top:10px;padding-top:8px;border-top:1px solid rgba(0,212,255,0.1)}
-  .res-label{font-family:'JetBrains Mono',monospace;font-size:.55rem;letter-spacing:1.5px;
-    text-transform:uppercase;color:var(--muted);margin-bottom:6px}
 </style>
 </head>
 <body>
 
-<!-- SHARED NAV -->
-<div class="shared-nav">
-  <div class="shared-nav-top">
-    <div>
-      <div class="nav-brand-text">Shell<span>TI</span></div>
-      <div class="nav-brand-sub">Scanner · Panel de Administración</div>
-    </div>
-    <a href="/" style="font-family:'JetBrains Mono',monospace;font-size:.58rem;letter-spacing:1.5px;text-transform:uppercase;color:rgba(148,163,184,0.4);text-decoration:none;transition:color .2s" onmouseover="this.style.color='rgba(0,212,255,0.8)'" onmouseout="this.style.color='rgba(148,163,184,0.4)'">← Volver</a>
-  </div>
-</div>
-
-<!-- LOGIN -->
+<!-- ── LOGIN ── -->
 <div id="loginView">
   <div class="login-card">
-    <div class="login-header">
-      <div class="logo">Shell<span>TI</span></div>
-      <div class="login-sub">Panel de Administración</div>
+    <div class="eyebrow">ShellTI · Administración</div>
+    <div class="login-title">Panel Admin</div>
+    <div class="login-desc">Acceso restringido al equipo ShellTI.</div>
+    <div class="divider"></div>
+    <div style="margin-bottom:8px">
+      <label class="flabel">Contraseña de admin</label>
+      <div style="position:relative">
+        <input type="password" id="adminPass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"
+          style="width:100%;padding-right:44px;background:rgba(255,255,255,0.04);border:1px solid var(--border);color:var(--silver);font-family:'JetBrains Mono',monospace;font-size:.82rem;padding:11px 44px 11px 14px;outline:none;transition:border-color .2s" />
+        <button onclick="togglePass()" id="eye-btn" type="button"
+          style="position:absolute;right:0;top:0;height:100%;width:42px;background:transparent;border:none;border-left:1px solid var(--border);color:var(--muted);cursor:pointer;font-size:.85rem;transition:color .2s"
+          onmouseover="this.style.color='var(--cyan)'" onmouseout="this.style.color='var(--muted)'" title="Ver contraseña">
+          👁
+        </button>
+      </div>
     </div>
-    <div class="login-body">
-      <a href="/auth/google" style="display:flex;align-items:center;justify-content:center;gap:10px;width:100%;background:#fff;border:1px solid #e2e8f0;color:#0f172a;font-family:'Plus Jakarta Sans',sans-serif;font-size:.85rem;font-weight:600;padding:12px;cursor:pointer;text-decoration:none;transition:box-shadow .2s;margin-bottom:16px" onmouseover="this.style.boxShadow='0 2px 12px rgba(0,0,0,0.2)'" onmouseout="this.style.boxShadow='none'">
-        <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#4285F4" d="M44.5 20H24v8.5h11.8C34.7 33.9 30.1 37 24 37c-7.2 0-13-5.8-13-13s5.8-13 13-13c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 4.1 29.6 2 24 2 11.8 2 2 11.8 2 24s9.8 22 22 22c11 0 21-8 21-22 0-1.3-.2-2.7-.5-4z"/><path fill="#34A853" d="M6.3 14.7l7 5.1C15.1 16 19.2 13 24 13c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 4.1 29.6 2 24 2 16.3 2 9.7 6.4 6.3 14.7z"/><path fill="#FBBC05" d="M24 46c5.9 0 10.9-2 14.5-5.4l-6.7-5.5C29.9 36.6 27.1 37.5 24 37.5c-6.1 0-10.6-3.6-12.4-8.4l-7 5.4C8.1 42.1 15.5 46 24 46z"/><path fill="#EA4335" d="M44.5 20H24v8.5h11.8c-.8 2.4-2.2 4.4-4.1 5.8l6.7 5.5C42 36.4 45 30.7 45 24c0-1.3-.2-2.7-.5-4z"/></svg>
-        Ingresar con Google
-      </a>
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
-        <div style="flex:1;height:1px;background:var(--border)"></div>
-        <span style="font-family:'JetBrains Mono',monospace;font-size:.58rem;color:var(--muted)">o</span>
-        <div style="flex:1;height:1px;background:var(--border)"></div>
+    <div style="margin-bottom:20px;display:flex;align-items:center;gap:8px">
+      <input type="checkbox" id="rememberPass" style="accent-color:var(--cyan);width:14px;height:14px;cursor:pointer" />
+      <label for="rememberPass" style="font-family:'JetBrains Mono',monospace;font-size:.6rem;letter-spacing:1px;text-transform:uppercase;color:var(--muted);cursor:pointer;user-select:none">Guardar contraseña</label>
+    </div>
+    <button class="btn-primary" onclick="doLogin()">Ingresar →</button>
+    <div class="login-err" id="loginErr">Contraseña incorrecta</div>
+    <div class="back-link"><a href="https://shellti.com/">← Volver al inicio</a></div>
+  </div>
+</div>
+
+<!-- ── ADMIN PANEL ── -->
+<div id="adminView" style="display:none;flex-direction:column">
+
+  <!-- Topbar -->
+  <div class="topbar">
+    <div>
+      <div class="topbar-brand">Shell<span>TI</span></div>
+      <div class="topbar-sub">Panel de Administración</div>
+    </div>
+    <div class="topbar-right">
+      <button class="btn-refresh" onclick="loadAll()">↻ Actualizar</button>
+      <button class="btn-logout" onclick="doLogout()">Salir →</button>
+    </div>
+  </div>
+
+  <!-- Shell -->
+  <div class="shell">
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <div class="sb-section">
+        <div class="sb-label">Resumen</div>
+        <div class="sb-stat">
+          <span class="sb-stat-label">Pendientes</span>
+          <span class="sb-stat-val c-warn" id="s-pending">—</span>
+        </div>
+        <div class="sb-stat">
+          <span class="sb-stat-label">Activos</span>
+          <span class="sb-stat-val c-ok" id="s-active">—</span>
+        </div>
+        <div class="sb-stat">
+          <span class="sb-stat-label">Aprobados</span>
+          <span class="sb-stat-val c-cyan" id="s-approved">—</span>
+        </div>
+        <div class="sb-stat">
+          <span class="sb-stat-label">Total</span>
+          <span class="sb-stat-val c-muted" id="s-total">—</span>
+        </div>
       </div>
-      <div class="field">
-        <label class="flabel">Contraseña de admin</label>
-        <input type="password" id="adminPass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()" />
+      <div class="sb-divider"></div>
+      <div class="sb-section" style="padding:0">
+        <div class="sb-label" style="padding:0 20px;margin-bottom:8px">Vistas</div>
+        <button class="sb-nav-btn active" id="nav-requests" onclick="switchTab('requests')">
+          <span>⬡</span> Solicitudes
+          <span class="sb-badge" id="pending-badge" style="display:none">0</span>
+        </button>
+        <button class="sb-nav-btn" id="nav-users" onclick="switchTab('users')">
+          <span>⬡</span> Usuarios activos
+        </button>
       </div>
-      <button class="btn-login" onclick="doLogin()">Ingresar con contraseña →</button>
-      <div class="login-err" id="loginErr">Contraseña incorrecta</div>
+    </div>
+
+    <!-- Content -->
+    <div class="content">
+
+      <!-- Tab: Solicitudes -->
+      <div class="tab-panel active" id="tab-requests">
+
+        <div class="filter-bar">
+          <input type="text" id="req-search" placeholder="Buscar por nombre, empresa o email..." oninput="filterRequests()" />
+          <button class="filter-chip active" id="chip-all" onclick="setFilter('all',this)">Todas</button>
+          <button class="filter-chip" id="chip-pending" onclick="setFilter('pending',this)">Pendientes</button>
+          <button class="filter-chip" id="chip-approved" onclick="setFilter('approved',this)">Aprobadas</button>
+          <button class="filter-chip" id="chip-rejected" onclick="setFilter('rejected',this)">Rechazadas</button>
+        </div>
+
+        <div id="req-list"></div>
+      </div>
+
+      <!-- Tab: Usuarios -->
+      <div class="tab-panel" id="tab-users">
+        <div class="sec-hd">
+          <div class="sec-title">Usuarios con acceso activo</div>
+        </div>
+        <div id="users-wrap"></div>
+      </div>
+
     </div>
   </div>
 </div>
 
-<!-- ADMIN PANEL -->
-<div id="adminView">
-  <nav style="position:sticky;top:0;z-index:200;background:rgba(2,6,23,0.97);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:0 2rem;height:48px;display:flex;align-items:center;justify-content:space-between">
-    <div>
-      <div class="nav-logo">Shell<span>TI</span></div>
-      <div class="nav-sub">Panel Admin</div>
-    </div>
-    <div class="nav-right">
-      <div id="adminUserInfo" style="font-family:'JetBrains Mono',monospace;font-size:.58rem;color:var(--muted);display:none;align-items:center;gap:8px">
-        <div id="adminAvatar" style="width:24px;height:24px;border-radius:50%;overflow:hidden;background:rgba(0,212,255,0.2);display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--cyan)"></div>
-        <span id="adminName"></span>
-      </div>
-      <button class="nav-tab active" id="tabReqBtn" onclick="switchTab('requests')">Solicitudes</button>
-      <button class="nav-tab" id="tabUsrBtn" onclick="switchTab('users')">Usuarios activos</button>
-      <button class="btn-logout" onclick="doLogout()">Salir</button>
-    </div>
-  </nav>
-
-  <div class="main">
-    <!-- STATS -->
-    <div class="stats" id="stats"></div>
-
-    <!-- TAB: SOLICITUDES -->
-    <div class="tab-content active" id="tabRequests">
-      <div class="section-hd">
-        <div class="section-title">Solicitudes pendientes</div>
-        <button onclick="loadAll()" style="font-family:'JetBrains Mono',monospace;font-size:.58rem;letter-spacing:1px;text-transform:uppercase;padding:5px 12px;background:transparent;border:1px solid var(--border);color:var(--muted);cursor:pointer" onmouseover="this.style.color='var(--cyan)'" onmouseout="this.style.color='var(--muted)'">↻ Actualizar</button>
-      </div>
-      <div id="pendingList"></div>
-
-      <div class="section-hd" style="margin-top:28px">
-        <div class="section-title">Historial</div>
-      </div>
-      <div id="historyList"></div>
-    </div>
-
-    <!-- TAB: USUARIOS -->
-    <div class="tab-content" id="tabUsers">
-      <div class="section-hd">
-        <div class="section-title">Usuarios con acceso activo</div>
-      </div>
-      <div id="usersList"></div>
+<!-- Edit resources modal -->
+<div class="modal-overlay" id="resModal">
+  <div class="modal">
+    <div class="modal-title">Editar acceso · <span id="modal-email"></span></div>
+    <div class="res-lbl" style="margin-bottom:8px">Recursos habilitados</div>
+    <div class="res-chips" id="modal-res-chips"></div>
+    <div class="modal-actions">
+      <button class="btn-save" onclick="saveModalResources()">Guardar cambios</button>
+      <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
     </div>
   </div>
 </div>
@@ -223,351 +307,380 @@ nav{position:sticky;top:0;z-index:200;background:rgba(2,6,23,0.97);backdrop-filt
 <div class="toast" id="toast"></div>
 
 <script>
-let adminToken = sessionStorage.getItem('shellti_admin_token') || '';
-let selectedDuration = {};  // requestId -> {ms, label}
-
+const RAILWAY = 'https://web-production-372660.up.railway.app';
+const RES_OPTIONS = ['agente','diagnostico','biblioteca','scanner'];
 const DURATIONS = [
-  { label: '1h',   ms: 3600000 },
-  { label: '4h',   ms: 14400000 },
-  { label: '12h',  ms: 43200000 },
-  { label: '1d',   ms: 86400000 },
-  { label: '3d',   ms: 259200000 },
-  { label: '7d',   ms: 604800000 },
-  { label: '30d',  ms: 2592000000 }
+  {label:'1h',ms:3600000},{label:'4h',ms:14400000},{label:'12h',ms:43200000},
+  {label:'1d',ms:86400000},{label:'3d',ms:259200000},{label:'7d',ms:604800000},{label:'30d',ms:2592000000}
 ];
 
-// ── AUTH ─────────────────────────────────────────────────────────────────────
-function showAdminPanel(googleUser) {
-  document.getElementById('loginView').style.display = 'none';
-  document.getElementById('adminView').style.display = 'block';
-  document.querySelector('.shared-nav').style.display = 'none';
-  if (googleUser) {
-    const info   = document.getElementById('adminUserInfo');
-    const avatar = document.getElementById('adminAvatar');
-    const name   = document.getElementById('adminName');
-    if (name) name.textContent = googleUser.name || googleUser.email;
-    if (avatar) avatar.innerHTML = googleUser.photo ? `<img src="${googleUser.photo}" style="width:100%;height:100%;object-fit:cover">` : (googleUser.name||'A')[0];
-    if (info) info.style.display = 'flex';
+let adminToken = sessionStorage.getItem('shellti_admin_token') || '';
+let selectedDuration = {};
+let allRequests = [];
+let currentFilter = 'all';
+let modalEmail = '';
+
+// ── REMEMBER PASSWORD ─────────────────────────────────────────────────────────
+(function loadSavedPass() {
+  const saved = localStorage.getItem('shellti_admin_pass');
+  if (saved) {
+    document.getElementById('adminPass').value = saved;
+    document.getElementById('rememberPass').checked = true;
   }
-  loadAll();
-  setInterval(loadAll, 30000);
+})();
+
+function togglePass() {
+  const input = document.getElementById('adminPass');
+  input.type = input.type === 'password' ? 'text' : 'password';
 }
 
-(async function initAuth() {
-  const params   = new URLSearchParams(window.location.search);
+// ── AUTH ──────────────────────────────────────────────────────────────────────
+(async function init() {
+  const params = new URLSearchParams(window.location.search);
   const urlToken = params.get('adminToken');
-  const urlError = params.get('error');
-  if (urlError === 'unauthorized') {
-    document.getElementById('loginErr').textContent = 'Email no autorizado como administrador.';
-    document.getElementById('loginErr').classList.add('visible');
-    return;
-  }
   if (urlToken) {
     adminToken = urlToken;
     sessionStorage.setItem('shellti_admin_token', adminToken);
-    window.history.replaceState({}, '', '/admin');
+    window.history.replaceState({}, '', '/admin.html');
   }
-  try {
-    const res  = await fetch('https://web-production-372660.up.railway.app/auth/google/status');
-    const data = await res.json();
-    if (data.authenticated) {
-      if (!adminToken && data.adminToken) {
-        adminToken = data.adminToken;
-        sessionStorage.setItem('shellti_admin_token', adminToken);
-      }
-      showAdminPanel(data.user);
-      return;
-    }
-  } catch(e) {}
-  if (adminToken) showAdminPanel();
+  if (adminToken) {
+    try {
+      const r = await fetch(`${RAILWAY}/auth/google/status`);
+      const d = await r.json();
+      if (d.authenticated) { showPanel(); return; }
+    } catch(e) {}
+    // Try password token
+    showPanel();
+  }
 })();
 
 async function doLogin() {
   const pass = document.getElementById('adminPass').value;
   const err  = document.getElementById('loginErr');
+  err.classList.remove('visible');
   try {
-    const res  = await fetch('https://web-production-372660.up.railway.app/admin/login', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ password: pass })
+    const res  = await fetch(`${RAILWAY}/admin/login`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({password: pass})
     });
     const data = await res.json();
     if (data.token) {
       adminToken = data.token;
       sessionStorage.setItem('shellti_admin_token', adminToken);
-      err.classList.remove('visible');
-      showAdminPanel();
+      if (document.getElementById('rememberPass').checked) {
+        localStorage.setItem('shellti_admin_pass', pass);
+      } else {
+        localStorage.removeItem('shellti_admin_pass');
+      }
+      showPanel();
     } else {
       err.classList.add('visible');
     }
-  } catch(e) { err.classList.add('visible'); }
+  } catch(e) {
+    err.textContent = 'Error de conexión';
+    err.classList.add('visible');
+  }
+}
+
+function showPanel() {
+  document.getElementById('loginView').style.display = 'none';
+  const av = document.getElementById('adminView');
+  av.style.display = 'flex';
+  loadAll();
+  setInterval(loadAll, 30000);
 }
 
 function doLogout() {
   sessionStorage.removeItem('shellti_admin_token');
-  window.location.href = '/auth/logout';
+  window.location.href = 'https://shellti.com/admin.html';
 }
 
-// ── TABS ─────────────────────────────────────────────────────────────────────
-function switchTab(tab) {
-  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
-  document.getElementById('tab' + (tab === 'requests' ? 'Requests' : 'Users')).classList.add('active');
-  document.getElementById('tab' + (tab === 'requests' ? 'Req' : 'Usr') + 'Btn').classList.add('active');
-  if (tab === 'users') loadUsers();
-}
-
-// ── LOAD ─────────────────────────────────────────────────────────────────────
+// ── LOAD ──────────────────────────────────────────────────────────────────────
 async function loadAll() {
   try {
-    const res  = await fetch('https://web-production-372660.up.railway.app/admin/requests', {
-      headers: {'x-admin-token': adminToken}
-    });
+    const res  = await fetch(`${RAILWAY}/admin/requests`, {headers:{'x-admin-token':adminToken}});
     if (res.status === 401) { doLogout(); return; }
     const data = await res.json();
-    renderRequests(data.requests || []);
-    renderStats(data.requests || [], data.users || []);
+    allRequests = data.requests || [];
+    renderStats(allRequests, data.users || []);
+    renderRequests(allRequests);
   } catch(e) {}
+  if (document.getElementById('tab-users').classList.contains('active')) loadUsers();
 }
 
 async function loadUsers() {
   try {
-    const res  = await fetch('https://web-production-372660.up.railway.app/admin/users', {
-      headers: {'x-admin-token': adminToken}
-    });
+    const res  = await fetch(`${RAILWAY}/admin/users`, {headers:{'x-admin-token':adminToken}});
     const data = await res.json();
     renderUsers(data.users || []);
   } catch(e) {}
 }
 
-// ── RENDER STATS ─────────────────────────────────────────────────────────────
+// ── STATS ─────────────────────────────────────────────────────────────────────
 function renderStats(requests, users) {
   const pending  = requests.filter(r => r.status === 'pending').length;
   const approved = requests.filter(r => r.status === 'approved').length;
   const active   = users.filter(u => u.active && new Date(u.expiresAt) > new Date()).length;
-  const total    = requests.length;
-  document.getElementById('stats').innerHTML = `
-    <div class="stat"><div class="stat-val c-warn">${pending}</div><div class="stat-label">Pendientes</div></div>
-    <div class="stat"><div class="stat-val c-ok">${active}</div><div class="stat-label">Activos ahora</div></div>
-    <div class="stat"><div class="stat-val c-cyan">${approved}</div><div class="stat-label">Aprobados total</div></div>
-    <div class="stat"><div class="stat-val" style="color:var(--muted)">${total}</div><div class="stat-label">Solicitudes total</div></div>`;
+  document.getElementById('s-pending').textContent  = pending;
+  document.getElementById('s-active').textContent   = active;
+  document.getElementById('s-approved').textContent = approved;
+  document.getElementById('s-total').textContent    = requests.length;
+  const badge = document.getElementById('pending-badge');
+  badge.textContent = pending;
+  badge.style.display = pending > 0 ? 'inline' : 'none';
 }
 
-// ── RENDER REQUESTS ───────────────────────────────────────────────────────────
+// ── TAB SWITCH ────────────────────────────────────────────────────────────────
+function switchTab(tab) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.sb-nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  document.getElementById('nav-' + tab).classList.add('active');
+  if (tab === 'users') loadUsers();
+}
+
+// ── FILTER / SEARCH ───────────────────────────────────────────────────────────
+function setFilter(f, btn) {
+  currentFilter = f;
+  document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+  btn.classList.add('active');
+  renderRequests(allRequests);
+}
+
+function filterRequests() { renderRequests(allRequests); }
+
 function renderRequests(requests) {
-  const pending = requests.filter(r => r.status === 'pending');
-  const history = requests.filter(r => r.status !== 'pending');
-
-  document.getElementById('pendingList').innerHTML = pending.length
-    ? pending.map(reqCard).join('')
-    : '<div class="empty">Sin solicitudes pendientes</div>';
-
-  document.getElementById('historyList').innerHTML = history.length
-    ? history.map(reqCard).join('')
-    : '<div class="empty">Sin historial</div>';
+  const q = (document.getElementById('req-search').value || '').toLowerCase();
+  let filtered = requests;
+  if (currentFilter !== 'all') filtered = filtered.filter(r => r.status === currentFilter);
+  if (q) filtered = filtered.filter(r =>
+    (r.name||'').toLowerCase().includes(q) ||
+    (r.company||'').toLowerCase().includes(q) ||
+    (r.email||'').toLowerCase().includes(q)
+  );
+  const sorted = [...filtered].sort((a,b) => {
+    if (a.status === 'pending' && b.status !== 'pending') return -1;
+    if (b.status === 'pending' && a.status !== 'pending') return 1;
+    return new Date(b.createdAt) - new Date(a.createdAt);
+  });
+  document.getElementById('req-list').innerHTML = sorted.length
+    ? sorted.map(reqCard).join('')
+    : `<div class="empty">Sin solicitudes para mostrar</div>`;
 }
 
 function reqCard(r) {
   const isPending = r.status === 'pending';
+  const initials  = (r.name||'?').split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
+  const statusTag = isPending
+    ? '<span class="tag tag-pending">Pendiente</span>'
+    : r.status === 'approved'
+      ? `<span class="tag tag-approved">Aprobado${r.durationLabel ? ' · '+r.durationLabel : ''}</span>`
+      : '<span class="tag tag-rejected">Rechazado</span>';
+
   const durPicker = isPending ? `
-    <div class="dur-picker">
-      ${DURATIONS.map(d => `
-        <button class="dur-btn ${(selectedDuration[r.id]?.label === d.label) ? 'sel' : ''}"
-          onclick="selectDur('${r.id}', ${d.ms}, '${d.label}', this)">
-          ${d.label}
-        </button>`).join('')}
-    </div>
-    <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
-      <label style="font-family:'JetBrains Mono',monospace;font-size:.58rem;letter-spacing:1px;color:var(--muted);white-space:nowrap">Máx. consultas</label>
-      <input type="number" id="maxScans-${r.id}" min="1" max="999" placeholder="∞ ilimitado"
-        style="width:110px;background:rgba(255,255,255,0.04);border:1px solid var(--border);color:var(--silver);font-family:'JetBrains Mono',monospace;font-size:.72rem;padding:4px 8px;outline:none"
-        onfocus="this.style.borderColor='rgba(0,212,255,0.5)'" onblur="this.style.borderColor='var(--border)'" />
-    </div>
-    <div class="res-section">
-      <div class="res-label">Acceso ShellTI.com</div>
-      <div class="res-toggles">
-        ${['agente','diagnostico','biblioteca','scanner'].map(r =>
-          `<label class="res-toggle">
-            <input type="checkbox" id="res-${r.id}-${r}" ${r === 'agente' ? 'checked' : ''}>
-            <span>${r}</span>
-          </label>`
-        ).join('')}
+    <div class="dur-row">
+      <span class="dur-label">Duración</span>
+      <div class="dur-chips">
+        ${DURATIONS.map(d => `<button class="dur-chip" onclick="selectDur('${r.id}',${d.ms},'${d.label}',this)">${d.label}</button>`).join('')}
       </div>
+    </div>
+    <div class="res-row">
+      <span class="res-lbl">Acceso</span>
+      <div class="res-chips">
+        ${RES_OPTIONS.map(opt => `
+          <label class="res-chip ${opt==='agente'?'checked':''}" id="rchip-${r.id}-${opt}" onclick="toggleResChip(event, this)">
+            <input type="checkbox" ${opt==='agente'?'checked':''} id="rcheck-${r.id}-${opt}"> ${opt}
+          </label>`).join('')}
+      </div>
+    </div>
+    <div class="scans-row">
+      <span class="res-lbl">Máx. consultas</span>
+      <input type="number" id="maxScans-${r.id}" min="1" max="999" placeholder="∞ ilimitado" />
     </div>
     <div class="action-row">
       <button class="btn-approve" id="approve-${r.id}" onclick="approve('${r.id}')">✓ Aprobar</button>
       <button class="btn-reject" onclick="reject('${r.id}')">✗ Rechazar</button>
-    </div>` : `
-    <div class="action-row" style="margin-top:4px">
-      <span class="status s-${r.status}">${r.status}</span>
-      ${r.durationLabel ? `<span style="font-family:'JetBrains Mono',monospace;font-size:.6rem;color:var(--muted)">· ${r.durationLabel}</span>` : ''}
-    </div>`;
+    </div>` : '';
 
   return `
-    <div class="req-card">
-      <div class="req-top">
-        <div class="req-info">
-          <div class="req-name">${r.name}</div>
-          <div class="req-company">${r.company}</div>
-          <div class="req-email">${r.email}</div>
-          <div class="req-reason">"${r.reason}"</div>
-        </div>
-        <div class="req-actions">
-          <div class="req-time">${formatDate(r.createdAt)}</div>
-          ${durPicker}
-        </div>
-      </div>
-    </div>`;
-}
-
-// ── RENDER USERS ──────────────────────────────────────────────────────────────
-function renderUsers(users) {
-  const active = users.filter(u => u.active);
-  document.getElementById('usersList').innerHTML = active.length
-    ? active.map(userRow).join('')
-    : '<div class="empty">Sin usuarios activos</div>';
-}
-
-function userRow(u) {
-  const exp      = new Date(u.expiresAt);
-  const now      = new Date();
-  const diffMs   = exp - now;
-  const diffH    = Math.floor(diffMs / 3600000);
-  const diffMin  = Math.floor((diffMs % 3600000) / 60000);
-  let expLabel, expClass;
-  if (diffMs <= 0) { expLabel = 'Expirado'; expClass = 'exp-dead'; }
-  else if (diffH < 2) { expLabel = `Expira en ${diffMin}min`; expClass = 'exp-warn'; }
-  else if (diffH < 24) { expLabel = `Expira en ${diffH}h`; expClass = 'exp-ok'; }
-  else { expLabel = `Expira ${exp.toLocaleDateString('es-CL')}`; expClass = 'exp-ok'; }
-
-  const resources = u.resources || [];
-  const resOptions = ['agente','diagnostico','biblioteca','scanner'];
-  const togglesHtml = resOptions.map(r =>
-    `<label class="res-toggle">
-      <input type="checkbox" ${resources.includes(r) ? 'checked' : ''}
-        id="res-${u.email.replace('@','_').replace('.','_')}-${r}">
-      <span>${r}</span>
-    </label>`
-  ).join('');
-  const emailKey = u.email.replace('@','_').replace('.','_');
-
-  return `
-    <div class="user-row">
-      <div class="user-info">
-        <div class="user-name">${u.name}</div>
-        <div class="user-email">${u.email}</div>
-        <div class="user-company">${u.company}</div>
-        <div class="user-expires ${expClass}">${expLabel}</div>
-        ${u.maxScans != null ? `<div style="font-family:'JetBrains Mono',monospace;font-size:.6rem;color:${(u.scansUsed||0)>=u.maxScans?'var(--danger)':'var(--muted)'}">🔍 ${u.scansUsed||0}/${u.maxScans} consultas usadas</div>` : ''}
-        <div style="margin-top:10px;border-top:1px solid rgba(0,212,255,0.1);padding-top:8px">
-          <div style="font-family:'JetBrains Mono',monospace;font-size:.58rem;color:var(--muted);letter-spacing:1px;margin-bottom:6px">ACCESO SHELLTI.COM</div>
-          <div class="res-toggles">${togglesHtml}</div>
-          <div style="display:flex;align-items:center">
-            <button class="btn-save-res" onclick="saveResources('${u.email}','${emailKey}')">GUARDAR</button>
-            <span class="res-saved" id="saved-${emailKey}">✓ guardado</span>
+    <div class="req-card" id="card-${r.id}">
+      <div class="req-head" onclick="toggleCard('${r.id}')">
+        <div class="req-head-left">
+          <div class="req-avatar">${initials}</div>
+          <div class="req-meta">
+            <div class="req-name">${r.name}</div>
+            <div class="req-company">${r.company}</div>
           </div>
         </div>
+        <div class="req-head-right">
+          <span class="req-email-tag">${r.email}</span>
+          ${statusTag}
+          <span class="req-time">${formatDate(r.createdAt)}</span>
+          <span class="chevron">▾</span>
+        </div>
       </div>
-      <button class="btn-revoke" onclick="revoke('${u.email}')">✗ Revocar</button>
+      <div class="req-body">
+        ${r.reason ? `<div class="req-reason-box">"${r.reason}"</div>` : ''}
+        ${durPicker}
+      </div>
     </div>`;
+}
+
+function toggleCard(id) {
+  document.getElementById('card-'+id).classList.toggle('open');
+}
+
+function toggleResChip(e, label) {
+  e.preventDefault();
+  label.classList.toggle('checked');
+  const cb = label.querySelector('input');
+  cb.checked = label.classList.contains('checked');
+}
+
+// ── USERS TABLE ───────────────────────────────────────────────────────────────
+function renderUsers(users) {
+  const active = users.filter(u => u.active);
+  if (!active.length) {
+    document.getElementById('users-wrap').innerHTML = '<div class="empty">Sin usuarios activos</div>';
+    return;
+  }
+  const rows = active.map(u => {
+    const exp    = new Date(u.expiresAt);
+    const now    = new Date();
+    const diffMs = exp - now;
+    const diffH  = Math.floor(diffMs / 3600000);
+    let expLabel, expClass;
+    if (diffMs <= 0)      { expLabel = 'Expirado'; expClass = 'exp-dead'; }
+    else if (diffH < 2)   { expLabel = `${Math.floor((diffMs%3600000)/60000)}min`; expClass = 'exp-warn'; }
+    else if (diffH < 24)  { expLabel = `${diffH}h`; expClass = 'exp-ok'; }
+    else                  { expLabel = exp.toLocaleDateString('es-CL'); expClass = 'exp-ok'; }
+    const res = (u.resources||[]).map(r=>`<span class="res-tag">${r}</span>`).join('');
+    const scans = u.maxScans != null
+      ? `<span style="color:${(u.scansUsed||0)>=u.maxScans?'var(--danger)':'var(--muted)'}">${u.scansUsed||0}/${u.maxScans}</span>`
+      : '<span style="color:var(--muted)">∞</span>';
+    return `<tr>
+      <td><div class="user-name-cell">${u.name}</div><div class="user-email-cell">${u.email}</div><div class="user-co-cell">${u.company||''}</div></td>
+      <td><span class="${expClass}">${expLabel}</span></td>
+      <td class="scans-cell">${scans}</td>
+      <td><div class="res-tags">${res||'<span style="color:var(--muted);font-size:.6rem">ninguno</span>'}</div></td>
+      <td style="white-space:nowrap">
+        <button class="btn-edit-res" onclick="openModal('${u.email}','${(u.resources||[]).join(',')}')">Editar</button>
+        <button class="btn-revoke" style="margin-left:6px" onclick="revoke('${u.email}')">✗ Revocar</button>
+      </td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('users-wrap').innerHTML = `
+    <table class="users-table">
+      <thead><tr>
+        <th>Usuario</th><th>Expira</th><th>Consultas</th><th>Recursos</th><th>Acciones</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
+// ── MODAL RECURSOS ────────────────────────────────────────────────────────────
+function openModal(email, resStr) {
+  modalEmail = email;
+  const current = resStr ? resStr.split(',').filter(Boolean) : [];
+  document.getElementById('modal-email').textContent = email;
+  document.getElementById('modal-res-chips').innerHTML = RES_OPTIONS.map(opt => `
+    <label class="res-chip ${current.includes(opt)?'checked':''}" onclick="toggleResChip(event, this)">
+      <input type="checkbox" ${current.includes(opt)?'checked':''}> ${opt}
+    </label>`).join('');
+  document.getElementById('resModal').classList.add('open');
+}
+
+function closeModal() { document.getElementById('resModal').classList.remove('open'); }
+
+async function saveModalResources() {
+  const chips    = document.querySelectorAll('#modal-res-chips .res-chip');
+  const resources = Array.from(chips).filter(c=>c.classList.contains('checked')).map(c=>c.textContent.trim());
+  const emailKey  = modalEmail.replace('@','_').replace('.','_');
+  try {
+    const res  = await fetch(`${RAILWAY}/admin/update-resources`, {
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-admin-token':adminToken},
+      body: JSON.stringify({email: modalEmail, resources})
+    });
+    const data = await res.json();
+    if (data.success) { toast('Recursos actualizados','ok'); closeModal(); loadUsers(); }
+    else toast(data.error||'Error','err');
+  } catch(e) { toast('Error de conexión','err'); }
 }
 
 // ── ACCIONES ──────────────────────────────────────────────────────────────────
 function selectDur(id, ms, label, btn) {
-  selectedDuration[id] = { ms, label };
-  btn.closest('.dur-picker').querySelectorAll('.dur-btn').forEach(b => b.classList.remove('sel'));
+  selectedDuration[id] = {ms, label};
+  btn.closest('.dur-chips').querySelectorAll('.dur-chip').forEach(b=>b.classList.remove('sel'));
   btn.classList.add('sel');
 }
 
 async function approve(id) {
   const dur = selectedDuration[id];
-  if (!dur) { toast('Selecciona una duración primero', 'err'); return; }
-  const maxScansInput = document.getElementById('maxScans-' + id);
-  const maxScans = maxScansInput && maxScansInput.value ? parseInt(maxScansInput.value) : null;
-  const btn = document.getElementById('approve-' + id);
+  if (!dur) { toast('Selecciona una duración primero','err'); return; }
+  const maxScansEl = document.getElementById('maxScans-'+id);
+  const maxScans   = maxScansEl?.value ? parseInt(maxScansEl.value) : null;
+  const resources  = RES_OPTIONS.filter(r => {
+    const el = document.getElementById('rcheck-'+id+'-'+r);
+    return el?.checked;
+  });
+  const btn = document.getElementById('approve-'+id);
   btn.disabled = true; btn.textContent = '...';
   try {
-    const resOptions = ['agente','diagnostico','biblioteca','scanner'];
-    const resources = resOptions.filter(r => {
-      const el = document.getElementById('res-' + id + '-' + r);
-      return el && el.checked;
-    });
-  const res  = await fetch(`https://web-production-372660.up.railway.app/admin/approve/${id}`, {
-      method: 'POST',
-      headers: {'Content-Type':'application/json','x-admin-token':adminToken},
-      body: JSON.stringify({ durationMs: dur.ms, durationLabel: dur.label, maxScans, resources })
+    const res  = await fetch(`${RAILWAY}/admin/approve/${id}`, {
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-admin-token':adminToken},
+      body: JSON.stringify({durationMs:dur.ms, durationLabel:dur.label, maxScans, resources})
     });
     const data = await res.json();
     if (data.success) {
-      const scansTxt = maxScans ? ` · ${maxScans} consultas máx.` : '';
-      toast(`Acceso aprobado por ${dur.label}${scansTxt} — email enviado`, 'ok');
+      toast(`Aprobado por ${dur.label}${maxScans?' · '+maxScans+' consultas':''}`,'ok');
       loadAll();
-    }
-    else { toast(data.error || 'Error', 'err'); btn.disabled = false; btn.textContent = '✓ Aprobar'; }
-  } catch(e) { toast('Error de conexión', 'err'); btn.disabled = false; btn.textContent = '✓ Aprobar'; }
+    } else { toast(data.error||'Error','err'); btn.disabled=false; btn.textContent='✓ Aprobar'; }
+  } catch(e) { toast('Error de conexión','err'); btn.disabled=false; btn.textContent='✓ Aprobar'; }
 }
 
 async function reject(id) {
   if (!confirm('¿Rechazar esta solicitud?')) return;
   try {
-    const res  = await fetch(`https://web-production-372660.up.railway.app/admin/reject/${id}`, {
-      method: 'POST',
-      headers: {'x-admin-token': adminToken}
+    const res  = await fetch(`${RAILWAY}/admin/reject/${id}`, {
+      method:'POST', headers:{'x-admin-token':adminToken}
     });
     const data = await res.json();
-    if (data.success) { toast('Solicitud rechazada', 'ok'); loadAll(); }
-    else toast(data.error || 'Error', 'err');
-  } catch(e) { toast('Error de conexión', 'err'); }
-}
-
-async function saveResources(email, emailKey) {
-  const resOptions = ['agente','diagnostico','biblioteca','scanner'];
-  const resources = resOptions.filter(r => {
-    const el = document.getElementById('res-' + emailKey + '-' + r);
-    return el && el.checked;
-  });
-  try {
-    const res = await fetch('https://web-production-372660.up.railway.app/admin/update-resources', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-admin-token': adminToken },
-      body: JSON.stringify({ email, resources })
-    });
-    const data = await res.json();
-    if (data.success) {
-      const saved = document.getElementById('saved-' + emailKey);
-      if (saved) { saved.style.display = 'inline'; setTimeout(() => saved.style.display = 'none', 2000); }
-    }
-  } catch(e) { alert('Error al guardar recursos'); }
+    if (data.success) { toast('Solicitud rechazada','ok'); loadAll(); }
+    else toast(data.error||'Error','err');
+  } catch(e) { toast('Error de conexión','err'); }
 }
 
 async function revoke(email) {
   if (!confirm(`¿Revocar acceso de ${email}?`)) return;
   try {
-    const res  = await fetch('https://web-production-372660.up.railway.app/admin/revoke', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json','x-admin-token':adminToken},
-      body: JSON.stringify({ email })
+    const res  = await fetch(`${RAILWAY}/admin/revoke`, {
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-admin-token':adminToken},
+      body: JSON.stringify({email})
     });
     const data = await res.json();
-    if (data.success) { toast('Acceso revocado', 'ok'); loadAll(); loadUsers(); }
-    else toast(data.error || 'Error', 'err');
-  } catch(e) { toast('Error de conexión', 'err'); }
+    if (data.success) { toast('Acceso revocado','ok'); loadAll(); loadUsers(); }
+    else toast(data.error||'Error','err');
+  } catch(e) { toast('Error de conexión','err'); }
 }
 
 // ── HELPERS ───────────────────────────────────────────────────────────────────
 function formatDate(iso) {
-  return new Date(iso).toLocaleString('es-CL', {
-    day:'2-digit', month:'2-digit', year:'2-digit',
-    hour:'2-digit', minute:'2-digit'
-  });
+  return new Date(iso).toLocaleString('es-CL',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'});
 }
 
 function toast(msg, type) {
   const el = document.getElementById('toast');
-  el.textContent = msg;
-  el.className = `toast ${type} show`;
+  el.textContent = msg; el.className = `toast ${type} show`;
   setTimeout(() => el.classList.remove('show'), 3500);
 }
+
+document.getElementById('resModal').addEventListener('click', e => {
+  if (e.target === document.getElementById('resModal')) closeModal();
+});
 </script>
 </body>
 </html>
