@@ -525,7 +525,7 @@ app.post('/leykarin/history/load', async (req, res) => {
     if (!user) return res.status(401).json({ error: 'Token invalido' });
     res.json({
       sessions: user.chatSessions || [],
-      user: { name: user.name, organization: user.organization }
+      user: { name: user.name, organization: user.organization, expiresAt: user.expiresAt }
     });
   } catch(e) {
     console.error('[leykarin/history/load]', e.message);
