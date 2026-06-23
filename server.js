@@ -9,7 +9,6 @@ const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const Groq           = require('groq-sdk');
 // Email via Brevo API (nodemailer reemplazado — Railway bloquea SMTP)
 const auth           = require('./auth');
-const authLK         = require('./auth-leykarin');
 const scanWebsite    = require('./scanWebsite');
 const analyze        = require('./analyze');
 
@@ -426,145 +425,32 @@ Devuelve SOLO JSON válido con: domain, ip, ipv6, asn, isp, country, city, cdn, 
 });
 
 
-// ── Ley Karin — Solicitud pública ────────────────────────────────────────────
-app.post('/leykarin/request', async (req, res) => {
-  const { name, organization, cargo, email, context } = req.body;
-  if (!name || !organization || !cargo || !email)
-    return res.status(400).json({ error: 'Nombre, organización, cargo y email son requeridos' });
-
-  try {
-    const r = await authLK.createRequest({ name, organization, cargo, email, context });
-    console.log(`[leykarin] Nueva solicitud: ${name} <${email}> (${organization})`);
-
-    await sendMail(
-      process.env.GMAIL_USER,
-      `[Ley Karin] Nueva solicitud — ${name} (${organization})`,
-      `<div style="font-family:Arial,sans-serif;max-width:560px">
-        <div style="background:#020617;padding:20px;border-bottom:3px solid #00D4FF">
-          <h2 style="color:#00D4FF;margin:0">ShellTI · Ley Karin</h2>
-          <p style="color:#64748b;margin:4px 0 0;font-size:13px">Solicitud de acceso al agente</p>
-        </div>
-        <div style="padding:20px;background:#f8fafc;border:1px solid #e2e8f0;border-top:none">
-          <table style="width:100%;border-collapse:collapse;font-size:14px">
-            <tr><td style="padding:6px 0;color:#64748b;width:120px">Nombre</td><td style="padding:6px 0;font-weight:600">${name}</td></tr>
-            <tr><td style="padding:6px 0;color:#64748b">Organización</td><td style="padding:6px 0">${organization}</td></tr>
-            <tr><td style="padding:6px 0;color:#64748b">Cargo</td><td style="padding:6px 0">${cargo}</td></tr>
-            <tr><td style="padding:6px 0;color:#64748b">Email</td><td style="padding:6px 0"><a href="mailto:${email}">${email}</a></td></tr>
-            ${context ? `<tr><td style="padding:6px 0;color:#64748b;vertical-align:top">Contexto</td><td style="padding:6px 0">${context}</td></tr>` : ''}
-          </table>
-          <p style="margin-top:16px">
-            <a href="https://shellti.com/admin.html" style="background:#00D4FF;color:#020617;padding:10px 24px;text-decoration:none;font-weight:700;display:inline-block">
-              REVISAR EN ADMIN →
-            </a>
-          </p>
-        </div>
-      </div>`
-    );
-
-    res.json({ success: true, id: r.id });
-  } catch(e) {
-    console.error('[leykarin/request]', e.message);
-    res.status(500).json({ error: 'Error al procesar la solicitud' });
-  }
-});
-
-// ── Ley Karin — Validar token ─────────────────────────────────────────────────
-app.post('/leykarin/validate', async (req, res) => {
+// ── Ley Karin — Historial ────────────────────────────────────────────────────
+app.post('/leykarin/history/load', async (req, res) => {
   const { token } = req.body;
-  const user = await authLK.validateToken(token);
-  if (!user) return res.json({ valid: false });
-  res.json({ valid: true, name: user.name, organization: user.organization, expiresAt: user.expiresAt });
-});
-
-// ── Ley Karin — Admin: listar ─────────────────────────────────────────────────
-app.get('/leykarin/admin/requests', requireAdmin, async (req, res) => {
-  const [requests, users] = await Promise.all([authLK.getRequests(), authLK.getUsers()]);
-  res.json({ requests, users });
-});
-
-// ── Ley Karin — Admin: aprobar ────────────────────────────────────────────────
-app.post('/leykarin/admin/approve/:id', requireAdmin, async (req, res) => {
-  const { durationMs, durationLabel } = req.body;
-  if (!durationMs) return res.status(400).json({ error: 'Duración requerida' });
-
-  const shellti = process.env.SHELLTI_URL || 'https://shellti.com';
-
+  if (!token) return res.status(400).json({ error: 'Token requerido' });
   try {
-    const r = await authLK.approveRequest(req.params.id, Number(durationMs), durationLabel);
-    if (!r) return res.status(404).json({ error: 'Solicitud no encontrada' });
-
-    console.log(`[leykarin] Aprobado: ${r.email} por ${durationLabel}`);
-
-    const accessUrl = `${shellti}/leykarin.html?token=${r.accessToken}`;
-    const expires   = new Date(r.expiresAt).toLocaleString('es-CL', {
-      dateStyle: 'full', timeStyle: 'short', timeZone: 'America/Santiago'
-    });
-
-    await sendMail(
-      r.email,
-      `[ShellTI] Tu acceso al Agente Ley Karin ha sido habilitado`,
-      `<div style="font-family:Arial,sans-serif;max-width:560px">
-        <div style="background:#020617;padding:20px;border-bottom:3px solid #00D4FF">
-          <h2 style="color:#00D4FF;margin:0">ShellTI · Ley Karin</h2>
-          <p style="color:#64748b;margin:4px 0 0;font-size:13px">Orientación especializada · Ley 21.643</p>
-        </div>
-        <div style="padding:24px;background:#f8fafc;border:1px solid #e2e8f0;border-top:none">
-          <p style="margin:0 0 12px">Estimado/a <strong>${r.name}</strong>,</p>
-          <p style="margin:0 0 16px;color:#475569;line-height:1.6">
-            Hemos habilitado tu acceso al <strong>Agente Ley Karin</strong> de ShellTI. Este recurso te permitirá obtener orientación especializada sobre la Ley 21.643 — acoso laboral, acoso sexual y violencia en el trabajo.
-          </p>
-          <div style="background:#f1f5f9;border-left:3px solid #00D4FF;padding:12px 16px;margin:0 0 20px">
-            <p style="margin:0;font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.05em">Acceso habilitado hasta</p>
-            <p style="margin:4px 0 0;font-weight:700;font-size:15px;color:#0f172a">${expires}</p>
-          </div>
-          <div style="text-align:center;margin:0 0 20px">
-            <a href="${accessUrl}" style="background:#00D4FF;color:#020617;padding:14px 36px;text-decoration:none;font-weight:700;font-size:14px;display:inline-block;letter-spacing:.03em">
-              ACCEDER AL AGENTE →
-            </a>
-          </div>
-          <p style="font-size:11px;color:#94a3b8;text-align:center;word-break:break-all">
-            <a href="${accessUrl}" style="color:#0284c7">${accessUrl}</a>
-          </p>
-          <hr style="border:none;border-top:1px solid #e2e8f0;margin:20px 0" />
-          <p style="font-size:11px;color:#94a3b8;line-height:1.6;margin:0">
-            Este enlace es personal e intransferible. La información que compartas con el agente es confidencial y no será divulgada a terceros. Para consultas, escríbenos a <a href="mailto:contacto@shellti.com" style="color:#0284c7">contacto@shellti.com</a>.
-          </p>
-        </div>
-      </div>`
-    );
-
-    res.json({ success: true, emailSent: canEmail() });
+    const user = await authLK.validateToken(token);
+    if (!user) return res.status(401).json({ error: 'Token invalido' });
+    res.json({ history: user.chatHistory || [] });
   } catch(e) {
-    console.error('[leykarin/approve]', e.message);
+    console.error('[leykarin/history/load]', e.message);
     res.status(500).json({ error: e.message });
   }
 });
 
-// ── Ley Karin — Admin: rechazar ───────────────────────────────────────────────
-app.post('/leykarin/admin/reject/:id', requireAdmin, async (req, res) => {
+app.post('/leykarin/history/save', async (req, res) => {
+  const { token, history } = req.body;
+  if (!token || !Array.isArray(history)) return res.status(400).json({ error: 'Parametros invalidos' });
   try {
-    const r = await authLK.getRequest(req.params.id);
-    if (!r) return res.status(404).json({ error: 'No encontrada' });
-    await authLK.rejectRequest(req.params.id);
-    await sendMail(
-      r.email,
-      '[ShellTI] Solicitud de acceso Ley Karin',
-      `<div style="font-family:Arial,sans-serif;max-width:560px;padding:20px">
-        <p>Estimado/a ${r.name},</p>
-        <p>En esta oportunidad no fue posible habilitar tu acceso al Agente Ley Karin. Para más información, contáctanos en <a href="mailto:contacto@shellti.com">contacto@shellti.com</a>.</p>
-      </div>`
-    );
+    const user = await authLK.validateToken(token);
+    if (!user) return res.status(401).json({ error: 'Token invalido' });
+    await authLK.saveHistory(token, history);
     res.json({ success: true });
   } catch(e) {
+    console.error('[leykarin/history/save]', e.message);
     res.status(500).json({ error: e.message });
   }
-});
-
-// ── Ley Karin — Admin: revocar usuario ───────────────────────────────────────
-app.post('/leykarin/admin/revoke', requireAdmin, async (req, res) => {
-  const user = await authLK.revokeUser(req.body.email);
-  if (!user) return res.status(404).json({ error: 'No encontrado' });
-  res.json({ success: true });
 });
 
 app.listen(PORT, '0.0.0.0', () => {
