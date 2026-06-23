@@ -488,7 +488,7 @@ function reqCard(r) {
       <span class="res-lbl">Acceso</span>
       <div class="res-chips">
         ${RES_OPTIONS.map(opt => `
-          <div class="res-chip ${opt==='agente'?'checked':''}" id="rchip-${r.id}-${opt}" onclick="this.classList.toggle('checked')">
+          <div class="res-chip ${opt==='agente'?'checked':''}" id="rchip-${r.id}-${opt}" onclick="event.stopPropagation();this.classList.toggle('checked')">
             ${opt}
           </div>`).join('')}
       </div>
@@ -585,7 +585,7 @@ function openModal(email, resStr) {
   const current = resStr ? resStr.split(',').filter(Boolean) : [];
   document.getElementById('modal-email').textContent = email;
   document.getElementById('modal-res-chips').innerHTML = RES_OPTIONS.map(opt => `
-    <div class="res-chip ${current.includes(opt)?'checked':''}" onclick="this.classList.toggle('checked')">
+    <div class="res-chip ${current.includes(opt)?'checked':''}" onclick="event.stopPropagation();this.classList.toggle('checked')">
       ${opt}
     </div>`).join('');
   document.getElementById('resModal').classList.add('open');
