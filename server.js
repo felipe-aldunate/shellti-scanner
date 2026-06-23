@@ -114,6 +114,7 @@ function getAccessUrl(token, resources) {
   // Si tiene recursos de shellti.com, el link va a shellti
   if (resources && resources.length > 0) {
     // Prioridad: agente > diagnostico > scanner
+    if (resources.includes('leykarin'))    return `${shellti}/leykarin.html?token=${token}`;
     if (resources.includes('agente'))      return `${shellti}/agente.html?token=${token}`;
     if (resources.includes('diagnostico')) return `${shellti}/diagnostico.html?token=${token}`;
   }
