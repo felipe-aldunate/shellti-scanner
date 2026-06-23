@@ -126,7 +126,7 @@ function toUser(u) {
     token: u.token, expiresAt: u.expires_at,
     active: u.active, createdAt: u.created_at,
     sessionsUsed: u.sessions_used || 0,
-    chatHistory: u.chat_history || []
+    chatSessions: u.chat_sessions || []
   };
 }
 
@@ -164,9 +164,9 @@ async function incrementSession(token) {
 }
 
 
-async function saveHistory(token, history) {
+async function saveSessions(token, sessions) {
   const rows = await sb('PATCH', 'leykarin_users', { filter: `token=eq.${token}` }, {
-    chat_history: history
+    chat_sessions: sessions
   });
   return rows[0] ? toUser(rows[0]) : null;
 }
@@ -174,5 +174,5 @@ async function saveHistory(token, history) {
 module.exports = {
   createRequest, getRequests, getRequest,
   approveRequest, rejectRequest,
-  getUsers, revokeUser, validateToken, incrementSession, saveHistory
+  getUsers, revokeUser, validateToken, incrementSession, saveSessions
 };

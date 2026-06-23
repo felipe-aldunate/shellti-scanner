@@ -425,14 +425,17 @@ Devuelve SOLO JSON válido con: domain, ip, ipv6, asn, isp, country, city, cdn, 
 });
 
 
-// ── Ley Karin — Historial ────────────────────────────────────────────────────
+// ── Ley Karin — Sesiones ─────────────────────────────────────────────────────
 app.post('/leykarin/history/load', async (req, res) => {
   const { token } = req.body;
   if (!token) return res.status(400).json({ error: 'Token requerido' });
   try {
     const user = await authLK.validateToken(token);
     if (!user) return res.status(401).json({ error: 'Token invalido' });
-    res.json({ history: user.chatHistory || [] });
+    res.json({
+      sessions: user.chatSessions || [],
+      user: { name: user.name, organization: user.organization }
+    });
   } catch(e) {
     console.error('[leykarin/history/load]', e.message);
     res.status(500).json({ error: e.message });
@@ -440,12 +443,12 @@ app.post('/leykarin/history/load', async (req, res) => {
 });
 
 app.post('/leykarin/history/save', async (req, res) => {
-  const { token, history } = req.body;
-  if (!token || !Array.isArray(history)) return res.status(400).json({ error: 'Parametros invalidos' });
+  const { token, sessions } = req.body;
+  if (!token || !Array.isArray(sessions)) return res.status(400).json({ error: 'Parametros invalidos' });
   try {
     const user = await authLK.validateToken(token);
     if (!user) return res.status(401).json({ error: 'Token invalido' });
-    await authLK.saveHistory(token, history);
+    await authLK.saveSessions(token, sessions.slice(-10));
     res.json({ success: true });
   } catch(e) {
     console.error('[leykarin/history/save]', e.message);
