@@ -653,6 +653,44 @@ app.post('/leykarin/check-approval', async (req, res) => {
   } catch(e) { res.json({ approved: false }); }
 });
 
+
+// ── Admin quick access tokens ────────────────────────────────────
+app.post('/admin/quick-access/:agent', requireAdmin, async (req, res) => {
+  const { agent } = req.params;
+  const agents = {
+    'leykarin': { auth: authLK, url: 'leykarin.html' },
+    'copropiedad': { auth: authCP, url: 'copropiedad.html' },
+    'scanner': { auth: auth, url: 'dashboard.html' }
+  };
+  
+  if (!agents[agent]) return res.status(400).json({ error: 'Agente no encontrado' });
+  
+  const { auth: authModule, url } = agents[agent];
+  const token = require('crypto').randomBytes(24).toString('hex');
+  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+  
+  try {
+    await authModule.sb('POST', 'users', {}, {
+      email: `admin-${agent}@shellti.com`,
+      name: 'Admin',
+      company: 'ShellTI',
+      token,
+      expires_at: expiresAt,
+      active: true,
+      created_at: new Date().toISOString(),
+      max_scans: null,
+      scans_used: 0,
+      resources: ['scanner', 'agente', 'diagnostico']
+    });
+    
+    const shellti = process.env.SHELLTI_URL || 'https://shellti.com';
+    const accessUrl = `${shellti}/${url}?token=${token}`;
+    res.json({ success: true, accessUrl, token });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`\nShellTI Scanner corriendo en puerto ${PORT}`);
   console.log(`Admin: ${process.env.BASE_URL || 'http://localhost:' + PORT}/admin`);
