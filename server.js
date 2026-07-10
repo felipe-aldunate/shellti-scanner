@@ -303,12 +303,14 @@ app.post('/admin/approve/:id', requireAdmin, async (req, res) => {
 });
 
 app.post('/admin/reject/:id', requireAdmin, async (req, res) => {
-  const r = await auth.getRequest(req.params.id);
+  const r = await auth.rejectRequest(req.params.id);
   if (!r) return res.status(404).json({ error: 'No encontrada' });
-  r.status = 'rejected';
-  await sendMail(r.email, '[ShellTI] Solicitud de acceso',
+  
+  await sendMail(r.email, '[ShellTI] Solicitud rechazada',
     `<p>Hola ${r.name}, en esta oportunidad no fue posible aprobar tu solicitud. Contacto: <a href="mailto:contacto@shellti.com">contacto@shellti.com</a></p>`
   );
+  
+  console.log(`[admin] Rechazado: ${r.email}`);
   res.json({ success: true });
 });
 
@@ -318,9 +320,15 @@ app.post('/admin/extend-user', requireAdmin, async (req, res) => {
   const users = await auth.getUsers();
   const user = users.find(u => u.email === email);
   if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
-  user.expiresAt = new Date(Date.now() + Number(durationMs)).toISOString();
-  if (maxScans != null) { user.maxScans = parseInt(maxScans); user.scansUsed = 0; }
-  console.log(`[admin] Acceso extendido: ${email} por ${durationLabel}`);
+  
+  const expiresAt = new Date(Date.now() + Number(durationMs)).toISOString();
+  await auth.sb('PATCH', 'users', { filter: `email=eq.${email}` }, {
+    expires_at: expiresAt,
+    max_scans: maxScans != null ? parseInt(maxScans) : user.maxScans,
+    scans_used: maxScans != null ? 0 : user.scansUsed
+  });
+  
+  console.log(`[admin] Acceso extendido: ${email} por ${durationLabel}${maxScans ? ` · ${maxScans} consultas` : ''}`);
   res.json({ success: true });
 });
 
