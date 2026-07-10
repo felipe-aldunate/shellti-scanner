@@ -308,7 +308,7 @@ input[type=password]:focus{border-color:rgba(0,212,255,0.5)}
 
 <script>
 const RAILWAY = 'https://web-production-372660.up.railway.app';
-const RES_OPTIONS = ['agente','diagnostico','biblioteca','scanner'];
+const RES_OPTIONS = ['agente','diagnostico','biblioteca','scanner','leykarin'];
 const DURATIONS = [
   {label:'1h',ms:3600000},{label:'4h',ms:14400000},{label:'12h',ms:43200000},
   {label:'1d',ms:86400000},{label:'3d',ms:259200000},{label:'7d',ms:604800000},{label:'30d',ms:2592000000}
@@ -682,5 +682,26 @@ document.getElementById('resModal').addEventListener('click', e => {
   if (e.target === document.getElementById('resModal')) closeModal();
 });
 </script>
+      <!-- ACCESO RÁPIDO A AGENTES -->
+      <div class="sb-section">
+        <div class="sb-label">Acceso Rápido</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <button class="tool-btn" onclick="quickAccess('scanner')">Scanner</button>
+          <button class="tool-btn" onclick="quickAccess('leykarin')">Ley Karin</button>
+          <button class="tool-btn" onclick="quickAccess('copropiedad')">Copropiedad</button>
+        </div>
+      </div>
+      <script>
+      async function quickAccess(agent) {
+        try {
+          const res = await fetch(`/admin/quick-access/${agent}`, { method: 'POST' });
+          const data = await res.json();
+          if (data.success) {
+            window.open(data.accessUrl, '_blank');
+          }
+        } catch(e) { alert('Error: ' + e.message); }
+      }
+      </script>
+
 </body>
 </html>
