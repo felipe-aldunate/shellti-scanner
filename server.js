@@ -691,6 +691,52 @@ app.post('/admin/quick-access/:agent', requireAdmin, async (req, res) => {
   }
 });
 
+// ── Analizar cuestionario Ley 21.719 ──────────────────────────────────────
+app.post('/api/analyze-questionnaire', async (req, res) => {
+  try {
+    const { responses, empresa, email } = req.body;
+    
+    if (!responses) {
+      return res.status(400).json({ error: 'Respuestas requeridas' });
+    }
+
+    const prompt = `Analiza este cuestionario de cumplimiento Ley 21.719 e ISO 27001:2022.
+
+Empresa: ${empresa || 'N/A'}
+Email: ${email || 'N/A'}
+
+RESPUESTAS:
+${Object.entries(responses).map(([k, v]) => `${k}: ${v}`).join('\n')}
+
+Genera análisis COHERENTE que NO diga "satisfactorio" si hay brechas. 
+Por área: estado actual, brecha, riesgos, recomendaciones clave.`;
+
+    const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+    const response = await groq.chat.completions.create({
+      model: 'llama-3.1-8b-instant',
+      messages: [{
+        role: 'system',
+        content: 'Eres experto en compliance normativo. Hablas español. Genera análisis profundo y profesional.'
+      }, {
+        role: 'user',
+        content: prompt
+      }],
+      temperature: 0.7,
+      max_tokens: 2000
+    });
+
+    const analysis = response.choices?.[0]?.message?.content;
+
+    if (!analysis) {
+      return res.status(500).json({ error: 'No se generó análisis' });
+    }
+
+    res.json({ analysis });
+  } catch (error) {
+    console.error('[/api/analyze-questionnaire]', error.message);
+    res.status(500).json({ error: 'Error procesando solicitud' });
+  }
+});
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`\nShellTI Scanner corriendo en puerto ${PORT}`);
   console.log(`Admin: ${process.env.BASE_URL || 'http://localhost:' + PORT}/admin`);
